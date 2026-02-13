@@ -1,0 +1,4 @@
+scientific_name,common_name,plant_type,lifecycle,state_code,season_code,start_month,end_month
+Ocimum tenuiflorum,Tulsi,herb,perennial,IN-KA,monsoon,6,11
+Trigonella foenum-graecum,Fenugreek,crop,annual,IN-MH,winter,10,2
+Curcuma longa,Turmeric,crop,perennial,IN-TN,monsoon,6,10
