@@ -23,6 +23,12 @@ India-focused plant intelligence MVP with:
 5. `cd /Users/fallofpheonix/AndroidStudioProjects/TerraHerb && flutter pub get`
 6. `cd /Users/fallofpheonix/AndroidStudioProjects/TerraHerb && flutter run`
 
+## Mobile API base URL
+- Android emulator default is auto-mapped to `http://10.0.2.2:8080`.
+- iOS simulator default is `http://localhost:8080`.
+- Physical devices should use LAN host via:
+  - `flutter run --dart-define=API_BASE_URL=http://<your-lan-ip>:8080`
+
 ## Validation commands
 - Backend: `cd backend && go test ./...`
 - Flutter: `flutter analyze && flutter test`

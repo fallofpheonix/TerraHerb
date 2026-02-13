@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/plant_list_item.dart';
@@ -9,10 +10,25 @@ class PlantApiService {
 
   final http.Client _client;
 
-  static const String _baseUrl = String.fromEnvironment(
+  static const String _envBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8080',
+    defaultValue: '',
   );
+
+  String get _baseUrl {
+    if (_envBaseUrl.isNotEmpty) {
+      return _envBaseUrl;
+    }
+    if (kIsWeb) {
+      return 'http://localhost:8080';
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // Android emulator reaches host loopback via 10.0.2.2.
+      return 'http://10.0.2.2:8080';
+    }
+    // iOS simulator (and desktop) can use localhost directly.
+    return 'http://localhost:8080';
+  }
 
   Future<List<PlantListItem>> fetchPlantsBySeason({
     required String seasonCode,
