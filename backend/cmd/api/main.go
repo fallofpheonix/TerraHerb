@@ -28,10 +28,12 @@ func main() {
 	defer dbPool.Close()
 
 	repo := repository.NewPlantRepository(dbPool)
+	authRepo := repository.NewAuthRepository(dbPool)
 	cacheClient := cache.NewRedisClient(cfg.RedisAddr, cfg.RedisPassword)
 	plantService := service.NewPlantService(repo, cacheClient)
+	authService := service.NewAuthService(cfg, authRepo)
 
-	router := httpapi.NewRouter(cfg, plantService, cacheClient)
+	router := httpapi.NewRouter(cfg, plantService, authService)
 
 	srv := &http.Server{
 		Addr:         cfg.HTTPAddr,

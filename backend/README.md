@@ -20,6 +20,7 @@ Default local database URL:
 - `GET /metrics`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
 - `GET /api/v1/plants`
 - `GET /api/v1/plants/by-season?season=monsoon&region_code=IN-KA&month=7`
 - `GET /api/v1/plants/by-climate-zone?climate_zone=tropical_wet`
@@ -49,7 +50,8 @@ Output:
 - Up: `cd backend && go run ./cmd/migrate --cmd up`
 - Down 1 step: `cd backend && go run ./cmd/migrate --cmd down --steps 1`
 - Version: `cd backend && go run ./cmd/migrate --cmd version`
+- Fallback script (uses Go runner, then `psql` only if Go is unavailable): `cd backend && ./scripts/migrate.sh up`
 
 ## API documentation
-- OpenAPI: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/docs/api/openapi.yaml`
-- Postman: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/docs/api/TerraHerb.postman_collection.json`
+- OpenAPI: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/docs/openapi.yaml`
+- Postman: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/docs/postman_collection.json`

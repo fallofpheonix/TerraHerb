@@ -1,0 +1,50 @@
+{
+  "info": {
+    "name": "TerraHerb Backend Endpoints",
+    "_postman_id": "e6d2d8ea-6856-4a73-ae7d-74f39de7c49e",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "GET /health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "GET /api/v1/plants",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/plants?q=tulsi&page=1&limit=20"
+      }
+    },
+    {
+      "name": "GET /api/v1/plants/by-season",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/plants/by-season?season=monsoon&region_code=IN-KA&month=7"
+      }
+    },
+    {
+      "name": "GET /api/v1/plants/by-climate-zone",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/plants/by-climate-zone?climate_zone=tropical_wet&region_code=IN-KA"
+      }
+    },
+    {
+      "name": "GET /api/v1/plants/{id}",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/plants/1"
+      }
+    }
+  ]
+}

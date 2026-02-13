@@ -95,7 +95,8 @@ Status: Complete for operational docs/config
 - Note: Generated platform metadata may still contain old Flutter project identifiers; these do not block backend/API operation
 
 ## Files Added/Updated in Final Hardening Pass
-- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/ci.yml`
+- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/backend-ci.yml`
+- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/flutter-ci.yml`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/http/router.go`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/http/middleware.go`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/http/router_test.go`

@@ -1,50 +1,50 @@
 package http
 
 import (
-	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"terraherbarium/backend/internal/auth"
-	"terraherbarium/backend/internal/cache"
 	"terraherbarium/backend/internal/config"
 	"terraherbarium/backend/internal/models"
+	"terraherbarium/backend/internal/observability"
 	"terraherbarium/backend/internal/service"
 )
 
 type Handler struct {
 	cfg          config.Config
 	plantService *service.PlantService
-	cache        *cache.RedisClient
+	authService  *service.AuthService
 }
 
-func NewRouter(cfg config.Config, plantService *service.PlantService, cacheClient *cache.RedisClient) http.Handler {
+func NewRouter(cfg config.Config, plantService *service.PlantService, authService *service.AuthService) http.Handler {
 	h := &Handler{
 		cfg:          cfg,
 		plantService: plantService,
-		cache:        cacheClient,
+		authService:  authService,
 	}
-	obs := NewObservability()
+	logger := observability.NewLogger()
+	metrics := observability.NewMetrics()
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(obs.Middleware)
-	r.Use(rateLimitMiddleware(cacheClient, cfg.RateLimitPerMin))
+	r.Use(observability.RequestIDPropagationMiddleware)
+	r.Use(observability.RequestLoggingMiddleware(logger))
+	r.Use(metrics.Middleware)
+	r.Use(rateLimitMiddleware(plantService.Cache(), cfg.RateLimitPerMin))
 
 	r.Get("/health", h.health)
-	r.Get("/metrics", obs.MetricsHandler)
+	r.Get("/metrics", metrics.Handler)
 
 	r.Route("/api/v1", func(api chi.Router) {
 		api.Post("/auth/login", h.login)
 		api.Post("/auth/refresh", h.refresh)
+		api.Post("/auth/logout", h.logout)
 
 		api.With(authMiddleware(cfg.JWTSigningKey, false)).Get("/plants", h.searchPlants)
 		api.With(authMiddleware(cfg.JWTSigningKey, false)).Get("/plants/by-season", h.searchBySeason)
@@ -59,45 +59,27 @@ func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-type loginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type authResponse struct {
-	AccessToken      string `json:"access_token"`
-	RefreshToken     string `json:"refresh_token"`
-	TokenType        string `json:"token_type"`
-	AccessExpiresIn  int64  `json:"access_expires_in"`
-	RefreshExpiresIn int64  `json:"refresh_expires_in"`
-}
-
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
-	var req loginRequest
+	var req models.AuthLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid JSON payload")
 		return
 	}
 
-	if !secureEquals(req.Username, h.cfg.AuthAdminUser) || !secureEquals(req.Password, h.cfg.AuthAdminPass) {
-		writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid credentials")
-		return
-	}
-
-	resp, err := h.issueAuthTokens(r.Context(), req.Username, "admin")
+	resp, err := h.authService.LoginDevOTP(r.Context(), req)
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid credentials")
+			return
+		}
 		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to issue token")
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
-type refreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
 func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
-	var req refreshRequest
+	var req models.AuthRefreshRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid JSON payload")
 		return
@@ -107,67 +89,38 @@ func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims, err := auth.ParseToken(req.RefreshToken, h.cfg.JWTSigningKey)
-	if err != nil || claims.Scope != "refresh" || claims.ID == "" || claims.Subject == "" {
-		writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid refresh token")
-		return
-	}
-
-	cacheKey := refreshTokenKey(claims.ID)
-	subject, err := h.cache.Get(r.Context(), cacheKey)
-	if err != nil || !secureEquals(subject, claims.Subject) {
-		writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "refresh token expired or revoked")
-		return
-	}
-
-	_ = h.cache.Del(r.Context(), cacheKey)
-
-	resp, err := h.issueAuthTokens(r.Context(), claims.Subject, claims.Role)
+	resp, err := h.authService.Refresh(r.Context(), req)
 	if err != nil {
-		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to issue token")
+		switch {
+		case errors.Is(err, service.ErrInvalidToken), errors.Is(err, service.ErrInvalidDevice):
+			writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid refresh token")
+		default:
+			writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to refresh token")
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *Handler) issueAuthTokens(ctx context.Context, userID, role string) (*authResponse, error) {
-	accessTTL := time.Duration(h.cfg.AccessTokenMins) * time.Minute
-	refreshTTL := time.Duration(h.cfg.RefreshTokenHrs) * time.Hour
-
-	accessToken, err := auth.GenerateTokenWithTTL(userID, role, "access", h.cfg.JWTSigningKey, accessTTL)
-	if err != nil {
-		return nil, err
+func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	var req models.AuthLogoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid JSON payload")
+		return
 	}
-	refreshToken, err := auth.GenerateTokenWithTTL(userID, role, "refresh", h.cfg.JWTSigningKey, refreshTTL)
-	if err != nil {
-		return nil, err
+	if req.RefreshToken == "" {
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "refresh_token is required")
+		return
 	}
-	refreshClaims, err := auth.ParseToken(refreshToken, h.cfg.JWTSigningKey)
-	if err != nil {
-		return nil, err
+	if err := h.authService.Logout(r.Context(), req.RefreshToken); err != nil {
+		if errors.Is(err, service.ErrInvalidToken) {
+			writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid refresh token")
+			return
+		}
+		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", "logout failed")
+		return
 	}
-	if refreshClaims.ID == "" {
-		return nil, errors.New("missing refresh token ID")
-	}
-	if err := h.cache.Set(ctx, refreshTokenKey(refreshClaims.ID), userID, refreshTTL); err != nil {
-		return nil, err
-	}
-
-	return &authResponse{
-		AccessToken:      accessToken,
-		RefreshToken:     refreshToken,
-		TokenType:        "Bearer",
-		AccessExpiresIn:  int64(accessTTL.Seconds()),
-		RefreshExpiresIn: int64(refreshTTL.Seconds()),
-	}, nil
-}
-
-func refreshTokenKey(tokenID string) string {
-	return "auth:v1:refresh:" + tokenID
-}
-
-func secureEquals(a, b string) bool {
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+	writeJSON(w, http.StatusOK, map[string]string{"status": "logged_out"})
 }
 
 func (h *Handler) searchPlants(w http.ResponseWriter, r *http.Request) {

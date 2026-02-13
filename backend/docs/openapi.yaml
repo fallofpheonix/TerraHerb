@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: TerraHerb Backend API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /api/v1/plants:
+    get:
+      summary: List/search plants
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Plant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantListResponse'
+  /api/v1/plants/by-season:
+    get:
+      summary: Filter plants by season
+      parameters:
+        - in: query
+          name: season
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: region_code
+          schema:
+            type: string
+        - in: query
+          name: month
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+      responses:
+        '200':
+          description: Plant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantListResponse'
+  /api/v1/plants/by-climate-zone:
+    get:
+      summary: Filter plants by climate zone
+      parameters:
+        - in: query
+          name: climate_zone
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: region_code
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantListResponse'
+  /api/v1/plants/{id}:
+    get:
+      summary: Get plant details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Plant details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlantDetail'
+        '404':
+          description: Not found
+components:
+  schemas:
+    PlantListResponse:
+      type: object
+      properties:
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            has_next:
+              type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlantItem'
+    PlantItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        scientific_name:
+          type: string
+        primary_common_name:
+          type: string
+        plant_type:
+          type: string
+        lifecycle:
+          type: string
+        in_season:
+          type: boolean
+        suitability_score:
+          type: number
+    PlantDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        scientific_name:
+          type: string
+        plant_type:
+          type: string
+        lifecycle:
+          type: string
+        description:
+          type: string

@@ -17,6 +17,11 @@ func main() {
 	command := flag.String("cmd", "up", "migration command: up|down|version")
 	steps := flag.Int("steps", 1, "steps to run for down")
 	flag.Parse()
+	if *command == "down" && flag.NArg() > 0 {
+		if flag.Arg(0) == "1" {
+			*steps = 1
+		}
+	}
 
 	m, err := migrate.New(*migrationsPath, databaseURL)
 	if err != nil {

@@ -29,12 +29,13 @@ India-focused plant intelligence MVP with:
 - Environment check: `./scripts/doctor.sh`
 
 ## CI
-- GitHub Actions workflow: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/ci.yml`
-- Runs Flutter analyze/test and backend `go test` on push/PR.
+- Backend workflow: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/backend-ci.yml`
+- Flutter workflow: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/flutter-ci.yml`
+- Runs Flutter analyze/test and backend tidy/test/build on push/PR.
 
 ## API docs
-- OpenAPI spec: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/docs/api/openapi.yaml`
-- Postman collection: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/docs/api/TerraHerb.postman_collection.json`
+- OpenAPI spec: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/docs/openapi.yaml`
+- Postman collection: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/docs/postman_collection.json`
 
 ## Open source
 - License: MIT (`/Users/fallofpheonix/AndroidStudioProjects/terraherb/LICENSE`)

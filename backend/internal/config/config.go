@@ -11,8 +11,7 @@ type Config struct {
 	RedisAddr       string
 	RedisPassword   string
 	JWTSigningKey   string
-	AuthAdminUser   string
-	AuthAdminPass   string
+	AuthDevOTP      string
 	AccessTokenMins int
 	RefreshTokenHrs int
 	RateLimitPerMin int
@@ -25,8 +24,7 @@ func Load() Config {
 		RedisAddr:       getenv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:   os.Getenv("REDIS_PASSWORD"),
 		JWTSigningKey:   getenv("JWT_SIGNING_KEY", "change-me-in-prod"),
-		AuthAdminUser:   getenv("AUTH_ADMIN_USER", "admin"),
-		AuthAdminPass:   getenv("AUTH_ADMIN_PASS", "admin123"),
+		AuthDevOTP:      getenv("AUTH_DEV_OTP", "123456"),
 		AccessTokenMins: getenvInt("ACCESS_TOKEN_MINS", 15),
 		RefreshTokenHrs: getenvInt("REFRESH_TOKEN_HRS", 168),
 		RateLimitPerMin: getenvInt("RATE_LIMIT_PER_MIN", 120),

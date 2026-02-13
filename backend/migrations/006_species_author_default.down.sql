@@ -1,0 +1,2 @@
+ALTER TABLE species
+ALTER COLUMN author_citation DROP DEFAULT;
