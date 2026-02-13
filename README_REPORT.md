@@ -117,6 +117,20 @@ Status: Complete for operational docs/config
 - Flutter analyze: passed with no issues
 - Flutter tests: passed (`test/widget_test.dart`)
 
+## Android and iOS Readiness Details
+- Flutter project includes both platform targets:
+  - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/android`
+  - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/ios`
+- API connectivity defaults were corrected for local backend usage:
+  - Android emulator uses `http://10.0.2.2:8080`
+  - iOS simulator uses `http://localhost:8080`
+  - Physical devices use `--dart-define=API_BASE_URL=http://<lan-ip>:8080`
+- Android cleartext HTTP support enabled for local development:
+  - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/android/app/src/main/AndroidManifest.xml`
+- iOS ATS exceptions added for localhost development:
+  - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/ios/Runner/Info.plist`
+- App display naming normalized to `TerraHerb` for mobile launchers.
+
 ## Remaining Blockers
 - Docker daemon access required to run local Postgres/Redis stack
 - Go toolchain (1.22+) required to run backend build/tests/runtime checks
