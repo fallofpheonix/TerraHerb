@@ -1,34 +1,51 @@
 package http
 
 import (
+	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"terraherbarium/backend/internal/auth"
+	"terraherbarium/backend/internal/cache"
 	"terraherbarium/backend/internal/config"
 	"terraherbarium/backend/internal/models"
 	"terraherbarium/backend/internal/service"
 )
 
 type Handler struct {
+	cfg          config.Config
 	plantService *service.PlantService
+	cache        *cache.RedisClient
 }
 
-func NewRouter(cfg config.Config, plantService *service.PlantService) http.Handler {
-	h := &Handler{plantService: plantService}
+func NewRouter(cfg config.Config, plantService *service.PlantService, cacheClient *cache.RedisClient) http.Handler {
+	h := &Handler{
+		cfg:          cfg,
+		plantService: plantService,
+		cache:        cacheClient,
+	}
+	obs := NewObservability()
+
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Logger)
-	r.Use(rateLimitMiddleware(plantService.Cache(), cfg.RateLimitPerMin))
+	r.Use(obs.Middleware)
+	r.Use(rateLimitMiddleware(cacheClient, cfg.RateLimitPerMin))
 
 	r.Get("/health", h.health)
+	r.Get("/metrics", obs.MetricsHandler)
 
 	r.Route("/api/v1", func(api chi.Router) {
+		api.Post("/auth/login", h.login)
+		api.Post("/auth/refresh", h.refresh)
+
 		api.With(authMiddleware(cfg.JWTSigningKey, false)).Get("/plants", h.searchPlants)
 		api.With(authMiddleware(cfg.JWTSigningKey, false)).Get("/plants/by-season", h.searchBySeason)
 		api.With(authMiddleware(cfg.JWTSigningKey, false)).Get("/plants/by-climate-zone", h.searchByClimate)
@@ -42,15 +59,126 @@ func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+type loginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type authResponse struct {
+	AccessToken      string `json:"access_token"`
+	RefreshToken     string `json:"refresh_token"`
+	TokenType        string `json:"token_type"`
+	AccessExpiresIn  int64  `json:"access_expires_in"`
+	RefreshExpiresIn int64  `json:"refresh_expires_in"`
+}
+
+func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
+	var req loginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid JSON payload")
+		return
+	}
+
+	if !secureEquals(req.Username, h.cfg.AuthAdminUser) || !secureEquals(req.Password, h.cfg.AuthAdminPass) {
+		writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid credentials")
+		return
+	}
+
+	resp, err := h.issueAuthTokens(r.Context(), req.Username, "admin")
+	if err != nil {
+		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to issue token")
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+type refreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
+	var req refreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid JSON payload")
+		return
+	}
+	if req.RefreshToken == "" {
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "refresh_token is required")
+		return
+	}
+
+	claims, err := auth.ParseToken(req.RefreshToken, h.cfg.JWTSigningKey)
+	if err != nil || claims.Scope != "refresh" || claims.ID == "" || claims.Subject == "" {
+		writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid refresh token")
+		return
+	}
+
+	cacheKey := refreshTokenKey(claims.ID)
+	subject, err := h.cache.Get(r.Context(), cacheKey)
+	if err != nil || !secureEquals(subject, claims.Subject) {
+		writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "refresh token expired or revoked")
+		return
+	}
+
+	_ = h.cache.Del(r.Context(), cacheKey)
+
+	resp, err := h.issueAuthTokens(r.Context(), claims.Subject, claims.Role)
+	if err != nil {
+		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to issue token")
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) issueAuthTokens(ctx context.Context, userID, role string) (*authResponse, error) {
+	accessTTL := time.Duration(h.cfg.AccessTokenMins) * time.Minute
+	refreshTTL := time.Duration(h.cfg.RefreshTokenHrs) * time.Hour
+
+	accessToken, err := auth.GenerateTokenWithTTL(userID, role, "access", h.cfg.JWTSigningKey, accessTTL)
+	if err != nil {
+		return nil, err
+	}
+	refreshToken, err := auth.GenerateTokenWithTTL(userID, role, "refresh", h.cfg.JWTSigningKey, refreshTTL)
+	if err != nil {
+		return nil, err
+	}
+	refreshClaims, err := auth.ParseToken(refreshToken, h.cfg.JWTSigningKey)
+	if err != nil {
+		return nil, err
+	}
+	if refreshClaims.ID == "" {
+		return nil, errors.New("missing refresh token ID")
+	}
+	if err := h.cache.Set(ctx, refreshTokenKey(refreshClaims.ID), userID, refreshTTL); err != nil {
+		return nil, err
+	}
+
+	return &authResponse{
+		AccessToken:      accessToken,
+		RefreshToken:     refreshToken,
+		TokenType:        "Bearer",
+		AccessExpiresIn:  int64(accessTTL.Seconds()),
+		RefreshExpiresIn: int64(refreshTTL.Seconds()),
+	}, nil
+}
+
+func refreshTokenKey(tokenID string) string {
+	return "auth:v1:refresh:" + tokenID
+}
+
+func secureEquals(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
+
 func (h *Handler) searchPlants(w http.ResponseWriter, r *http.Request) {
 	params, err := parseSearchParams(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 	resp, err := h.plantService.SearchPlants(r.Context(), params)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -59,17 +187,17 @@ func (h *Handler) searchPlants(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) searchBySeason(w http.ResponseWriter, r *http.Request) {
 	params, err := parseSearchParams(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 	params.Season = r.URL.Query().Get("season")
 	if params.Season == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "season is required")
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "season is required")
 		return
 	}
 	resp, err := h.plantService.SearchPlants(r.Context(), params)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -78,17 +206,17 @@ func (h *Handler) searchBySeason(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) searchByClimate(w http.ResponseWriter, r *http.Request) {
 	params, err := parseSearchParams(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 	params.ClimateZone = r.URL.Query().Get("climate_zone")
 	if params.ClimateZone == "" {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "climate_zone is required")
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "climate_zone is required")
 		return
 	}
 	resp, err := h.plantService.SearchPlants(r.Context(), params)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		writeError(r, w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -97,12 +225,12 @@ func (h *Handler) searchByClimate(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getPlantByID(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "id must be an integer")
+		writeError(r, w, http.StatusBadRequest, "VALIDATION_ERROR", "id must be an integer")
 		return
 	}
 	plant, err := h.plantService.GetPlantByID(r.Context(), id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "NOT_FOUND", "plant not found")
+		writeError(r, w, http.StatusNotFound, "NOT_FOUND", "plant not found")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": plant})
@@ -187,11 +315,12 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-func writeError(w http.ResponseWriter, status int, code, message string) {
+func writeError(r *http.Request, w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, map[string]any{
 		"error": map[string]string{
-			"code":    code,
-			"message": message,
+			"code":       code,
+			"message":    message,
+			"request_id": middleware.GetReqID(r.Context()),
 		},
 	})
 }

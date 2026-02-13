@@ -38,3 +38,7 @@ func (r *RedisClient) IncrWithTTL(ctx context.Context, key string, ttl time.Dura
 	}
 	return count, nil
 }
+
+func (r *RedisClient) Del(ctx context.Context, key string) error {
+	return r.client.Del(ctx, key).Err()
+}

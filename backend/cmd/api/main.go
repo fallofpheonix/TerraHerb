@@ -31,7 +31,7 @@ func main() {
 	cacheClient := cache.NewRedisClient(cfg.RedisAddr, cfg.RedisPassword)
 	plantService := service.NewPlantService(repo, cacheClient)
 
-	router := httpapi.NewRouter(cfg, plantService)
+	router := httpapi.NewRouter(cfg, plantService, cacheClient)
 
 	srv := &http.Server{
 		Addr:         cfg.HTTPAddr,

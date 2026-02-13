@@ -11,7 +11,9 @@ Deliver a production-ready MVP with seasonal/location-aware plant discovery, nor
 ## Executive Summary
 - Flutter seasonal UI is implemented and integrated with backend seasonal API contract, with safe local fallback behavior.
 - Go backend scaffold is implemented with layered structure (`cmd`, `internal`, `migrations`, `scripts`), health endpoint, plant endpoints, Redis cache wrapper, JWT helper, and rate-limit middleware.
+- Auth flow now includes `login` and `refresh` endpoints with refresh-token rotation.
 - PostgreSQL normalized schema, indexes, reference seeds, sample data, and ingestion CLI are implemented.
+- OpenAPI and Postman artifacts are now included for `/api/v1` usage/testing.
 - Key hardening pass completed:
   - API query validation now returns deterministic `400` validation errors for invalid input.
   - Bearer parsing and client-IP extraction for rate limiting improved.
@@ -19,6 +21,8 @@ Deliver a production-ready MVP with seasonal/location-aware plant discovery, nor
   - Path hygiene and local defaults updated for TerraHerb naming in operational docs and runtime defaults.
   - CI pipeline added for Flutter + backend checks on push/PR.
   - Local `doctor` script added for prerequisite/debug diagnostics.
+  - Migration runner integrated via `golang-migrate` (`cmd/migrate`) instead of raw SQL script-only execution.
+  - Observability upgraded with structured request logs and `/metrics` endpoint.
 
 ## Story-by-Story Status
 

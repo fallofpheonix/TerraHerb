@@ -5,6 +5,8 @@ India-focused plant intelligence MVP with:
 - Go API backend
 - PostgreSQL normalized schema
 - Redis cache and rate-limit scaffolding
+- JWT auth + refresh flow
+- Structured API logs and request metrics
 - CSV ingestion CLI
 
 ## Project layout
@@ -29,6 +31,10 @@ India-focused plant intelligence MVP with:
 ## CI
 - GitHub Actions workflow: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/ci.yml`
 - Runs Flutter analyze/test and backend `go test` on push/PR.
+
+## API docs
+- OpenAPI spec: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/docs/api/openapi.yaml`
+- Postman collection: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/docs/api/TerraHerb.postman_collection.json`
 
 ## Open source
 - License: MIT (`/Users/fallofpheonix/AndroidStudioProjects/terraherb/LICENSE`)

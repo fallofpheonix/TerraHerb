@@ -1,0 +1,405 @@
+openapi: 3.0.3
+info:
+  title: TerraHerb API
+  version: 1.0.0
+  description: India-focused plant intelligence API.
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /metrics:
+    get:
+      summary: Request metrics snapshot
+      responses:
+        '200':
+          description: Metrics payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+  /api/v1/auth/login:
+    post:
+      summary: Login and issue access/refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+  /api/v1/auth/refresh:
+    post:
+      summary: Rotate refresh token and issue new token pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+  /api/v1/plants:
+    get:
+      summary: Search plants with filters
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/q'
+        - $ref: '#/components/parameters/season'
+        - $ref: '#/components/parameters/climate_zone'
+        - $ref: '#/components/parameters/region_code'
+        - $ref: '#/components/parameters/month'
+        - $ref: '#/components/parameters/plant_type'
+        - $ref: '#/components/parameters/lifecycle'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Plant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantListResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+  /api/v1/plants/by-season:
+    get:
+      summary: Plants for a season (season required)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/season'
+        - $ref: '#/components/parameters/region_code'
+        - $ref: '#/components/parameters/month'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Plant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantListResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+  /api/v1/plants/by-climate-zone:
+    get:
+      summary: Plants for a climate zone (climate_zone required)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/climate_zone'
+        - $ref: '#/components/parameters/region_code'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Plant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlantListResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+  /api/v1/plants/{id}:
+    get:
+      summary: Plant detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Plant detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PlantDetail'
+        '404':
+          $ref: '#/components/responses/Error404'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    q:
+      name: q
+      in: query
+      schema:
+        type: string
+    season:
+      name: season
+      in: query
+      schema:
+        type: string
+        enum: [spring, summer, monsoon, autumn, winter, year_round, kharif, rabi, zaid]
+    climate_zone:
+      name: climate_zone
+      in: query
+      schema:
+        type: string
+    region_code:
+      name: region_code
+      in: query
+      schema:
+        type: string
+        example: IN-KA
+    month:
+      name: month
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 12
+    plant_type:
+      name: plant_type
+      in: query
+      schema:
+        type: string
+        enum: [herb, crop, tree, weed, shrub, climber]
+    lifecycle:
+      name: lifecycle
+      in: query
+      schema:
+        type: string
+        enum: [annual, biennial, perennial]
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    Error400:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error401:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error404:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        access_expires_in:
+          type: integer
+        refresh_expires_in:
+          type: integer
+    PlantListResponse:
+      type: object
+      properties:
+        meta:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            has_next:
+              type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlantItem'
+    PlantItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        scientific_name:
+          type: string
+        primary_common_name:
+          type: string
+        plant_type:
+          type: string
+        lifecycle:
+          type: string
+        in_season:
+          type: boolean
+        suitability_score:
+          type: number
+    PlantDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        scientific_name:
+          type: string
+        plant_type:
+          type: string
+        lifecycle:
+          type: string
+        description:
+          type: string
+        common_names:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              language:
+                type: string
+              region_code:
+                type: string
+                nullable: true
+        taxonomy:
+          type: object
+          properties:
+            family:
+              type: string
+            genus:
+              type: string
+            species:
+              type: string
+        soil_preferences:
+          type: array
+          items:
+            type: string
+        water_requirement:
+          type: string
+        seasonality:
+          type: array
+          items:
+            type: object
+            properties:
+              region_code:
+                type: string
+              season:
+                type: string
+              start_month:
+                type: integer
+              end_month:
+                type: integer
+              suitability_score:
+                type: number
+        medicinal_uses:
+          type: array
+          items:
+            type: object
+            properties:
+              property:
+                type: string
+              part_used:
+                type: string
+              preparation:
+                type: string
+              evidence_level:
+                type: string
+        toxicity:
+          type: object
+          properties:
+            toxicity_class:
+              type: string
+            warning:
+              type: string
+        ecological_roles:
+          type: array
+          items:
+            type: string
+        is_invasive:
+          type: boolean
+    MetricsResponse:
+      type: object
+      properties:
+        requests_total:
+          type: integer
+        errors_total:
+          type: integer
+        by_route:
+          type: object
+          additionalProperties:
+            type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string

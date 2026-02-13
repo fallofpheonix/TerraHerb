@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -14,14 +16,23 @@ type Claims struct {
 }
 
 func GenerateToken(userID, role, scope, key string) (string, error) {
+	return GenerateTokenWithTTL(userID, role, scope, key, 15*time.Minute)
+}
+
+func GenerateTokenWithTTL(userID, role, scope, key string, ttl time.Duration) (string, error) {
 	now := time.Now()
+	jti, err := generateTokenID()
+	if err != nil {
+		return "", err
+	}
 	claims := Claims{
 		Role:  role,
 		Scope: scope,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
+			ID:        jti,
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -43,4 +54,12 @@ func ParseToken(tokenString, key string) (*Claims, error) {
 		return nil, errors.New("invalid token")
 	}
 	return claims, nil
+}
+
+func generateTokenID() (string, error) {
+	raw := make([]byte, 16)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(raw), nil
 }

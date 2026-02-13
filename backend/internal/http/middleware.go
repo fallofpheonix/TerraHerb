@@ -16,18 +16,18 @@ func authMiddleware(jwtKey string, required bool) func(http.Handler) http.Handle
 			token, hasHeader, ok := parseBearerToken(r.Header.Get("Authorization"))
 			if !hasHeader {
 				if required {
-					writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authorization header")
+					writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authorization header")
 					return
 				}
 				next.ServeHTTP(w, r)
 				return
 			}
 			if !ok {
-				writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid bearer token")
+				writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid bearer token")
 				return
 			}
 			if _, err := auth.ParseToken(token, jwtKey); err != nil {
-				writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
+				writeError(r, w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -43,7 +43,7 @@ func rateLimitMiddleware(c *cache.RedisClient, perMinute int) func(http.Handler)
 			count, err := c.IncrWithTTL(r.Context(), key, time.Minute)
 			if err == nil && count > int64(perMinute) {
 				w.Header().Set("Retry-After", "60")
-				writeError(w, http.StatusTooManyRequests, "RATE_LIMITED", "too many requests")
+				writeError(r, w, http.StatusTooManyRequests, "RATE_LIMITED", "too many requests")
 				return
 			}
 			next.ServeHTTP(w, r)
