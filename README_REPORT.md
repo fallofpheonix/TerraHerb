@@ -17,6 +17,8 @@ Deliver a production-ready MVP with seasonal/location-aware plant discovery, nor
   - Bearer parsing and client-IP extraction for rate limiting improved.
   - Ingestion validation and species dedup/upsert behavior strengthened.
   - Path hygiene and local defaults updated for TerraHerb naming in operational docs and runtime defaults.
+  - CI pipeline added for Flutter + backend checks on push/PR.
+  - Local `doctor` script added for prerequisite/debug diagnostics.
 
 ## Story-by-Story Status
 
@@ -89,14 +91,19 @@ Status: Complete for operational docs/config
 - Note: Generated platform metadata may still contain old Flutter project identifiers; these do not block backend/API operation
 
 ## Files Added/Updated in Final Hardening Pass
+- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/ci.yml`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/http/router.go`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/http/middleware.go`
+- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/http/router_test.go`
+- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/http/middleware_test.go`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/cmd/ingest/main.go`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/migrations/005_species_author_default.sql`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/migrations/004_seed_sample_plants.sql`
+- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/.env.example`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/internal/config/config.go`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/scripts/migrate.sh`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/docker-compose.yml`
+- `/Users/fallofpheonix/AndroidStudioProjects/terraherb/scripts/doctor.sh`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/README.md`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/backend/README.md`
 - `/Users/fallofpheonix/AndroidStudioProjects/terraherb/pubspec.yaml`

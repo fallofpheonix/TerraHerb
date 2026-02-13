@@ -9,6 +9,8 @@ From project root (`/Users/fallofpheonix/AndroidStudioProjects/TerraHerb`):
    - `cd backend && ./scripts/migrate.sh`
 3. Start API:
    - `cd backend && go run ./cmd/api`
+4. Optional env bootstrap:
+   - `cd backend && cp .env.example .env`
 
 Default local database URL:
 - `postgres://postgres:postgres@localhost:5432/terraherb?sslmode=disable`
@@ -22,6 +24,8 @@ Default local database URL:
 
 ## Validation behavior
 - Invalid query params return `400` with `VALIDATION_ERROR`.
+- `/api/v1/plants/by-season` requires `season`.
+- `/api/v1/plants/by-climate-zone` requires `climate_zone`.
 - Missing records return `404` with `NOT_FOUND`.
 - Invalid bearer tokens return `401` with `UNAUTHORIZED`.
 - Rate-limited requests return `429` and `Retry-After: 60`.

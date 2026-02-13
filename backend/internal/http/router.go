@@ -63,6 +63,10 @@ func (h *Handler) searchBySeason(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	params.Season = r.URL.Query().Get("season")
+	if params.Season == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "season is required")
+		return
+	}
 	resp, err := h.plantService.SearchPlants(r.Context(), params)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
@@ -78,6 +82,10 @@ func (h *Handler) searchByClimate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	params.ClimateZone = r.URL.Query().Get("climate_zone")
+	if params.ClimateZone == "" {
+		writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", "climate_zone is required")
+		return
+	}
 	resp, err := h.plantService.SearchPlants(r.Context(), params)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())

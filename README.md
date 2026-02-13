@@ -24,6 +24,11 @@ India-focused plant intelligence MVP with:
 ## Validation commands
 - Backend: `cd backend && go test ./...`
 - Flutter: `flutter analyze && flutter test`
+- Environment check: `./scripts/doctor.sh`
+
+## CI
+- GitHub Actions workflow: `/Users/fallofpheonix/AndroidStudioProjects/terraherb/.github/workflows/ci.yml`
+- Runs Flutter analyze/test and backend `go test` on push/PR.
 
 ## Open source
 - License: MIT (`/Users/fallofpheonix/AndroidStudioProjects/terraherb/LICENSE`)
