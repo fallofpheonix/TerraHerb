@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import 'data/models/plant_list_item.dart';
@@ -16,96 +14,90 @@ class TerraHerbariumApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Terra Herbarium',
+      title: 'TerraHerb',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2D7A3E)),
+        scaffoldBackgroundColor: const Color(0xFFF1F5EB),
       ),
-      home: const SeasonCatalogPage(),
+      home: const MarketplacePage(),
     );
   }
 }
 
 enum PlantSeason {
-  spring('Spring', 'spring', [Color(0xFFA5D6A7), Color(0xFF66BB6A)], Icons.local_florist),
-  summer('Summer', 'summer', [Color(0xFFFFCC80), Color(0xFFFF8A65)], Icons.wb_sunny),
-  monsoon('Monsoon', 'monsoon', [Color(0xFF80DEEA), Color(0xFF4DB6AC)], Icons.grain),
-  autumn('Autumn', 'autumn', [Color(0xFFFFE082), Color(0xFFFFB74D)], Icons.park),
-  winter('Winter', 'winter', [Color(0xFFB3E5FC), Color(0xFF90CAF9)], Icons.ac_unit),
-  yearRound('Year Round', 'year_round', [Color(0xFFC8E6C9), Color(0xFF81C784)], Icons.eco);
+  spring('Spring', 'spring'),
+  summer('Summer', 'summer'),
+  monsoon('Monsoon', 'monsoon'),
+  autumn('Autumn', 'autumn'),
+  winter('Winter', 'winter'),
+  yearRound('Year Round', 'year_round');
 
-  const PlantSeason(this.label, this.apiCode, this.gradientColors, this.icon);
+  const PlantSeason(this.label, this.apiCode);
 
   final String label;
   final String apiCode;
-  final List<Color> gradientColors;
-  final IconData icon;
 }
 
 class CropInfo {
-  const CropInfo({required this.name, required this.subtitle, required this.icon});
+  const CropInfo({required this.name, required this.subtitle, required this.icon, required this.price});
 
   final String name;
   final String subtitle;
   final IconData icon;
+  final int price;
 }
 
 const Map<PlantSeason, List<CropInfo>> _fallbackSeasonCrops = {
   PlantSeason.spring: [
-    CropInfo(name: 'Coriander', subtitle: 'Quick leafy harvest', icon: Icons.spa),
-    CropInfo(name: 'Spinach', subtitle: 'Cool-weather greens', icon: Icons.energy_savings_leaf),
-    CropInfo(name: 'Mint', subtitle: 'Aromatic and fast spreading', icon: Icons.local_florist),
+    CropInfo(name: 'Bok Choy', subtitle: '3 weeks • 12 seed/pack', icon: Icons.eco, price: 14),
+    CropInfo(name: 'Lettuce', subtitle: '3 weeks • 12 seed/pack', icon: Icons.grass, price: 14),
+    CropInfo(name: 'Convolvulus', subtitle: '3 months • 12 seed/pack', icon: Icons.spa, price: 12),
   ],
   PlantSeason.summer: [
-    CropInfo(name: 'Basil', subtitle: 'Heat-friendly herb', icon: Icons.eco),
-    CropInfo(name: 'Chili', subtitle: 'Strong sunlight crop', icon: Icons.local_fire_department),
-    CropInfo(name: 'Okra', subtitle: 'Performs well in heat', icon: Icons.grass),
+    CropInfo(name: 'Amaranth', subtitle: '2 weeks • 18 seed/pack', icon: Icons.energy_savings_leaf, price: 10),
+    CropInfo(name: 'Okra', subtitle: '6 weeks • 10 seed/pack', icon: Icons.local_florist, price: 15),
+    CropInfo(name: 'Chili', subtitle: '8 weeks • 20 seed/pack', icon: Icons.local_fire_department, price: 11),
   ],
   PlantSeason.monsoon: [
-    CropInfo(name: 'Turmeric', subtitle: 'Monsoon planting window', icon: Icons.bubble_chart),
-    CropInfo(name: 'Ginger', subtitle: 'Moisture-loving rhizome', icon: Icons.water_drop),
-    CropInfo(name: 'Amaranth', subtitle: 'Reliable rainy-season green', icon: Icons.forest),
+    CropInfo(name: 'Turmeric', subtitle: '10 weeks • 8 rhizomes', icon: Icons.spa, price: 16),
+    CropInfo(name: 'Ginger', subtitle: '8 weeks • 10 rhizomes', icon: Icons.water_drop, price: 13),
+    CropInfo(name: 'Mint', subtitle: '4 weeks • starter set', icon: Icons.eco, price: 9),
   ],
   PlantSeason.autumn: [
-    CropInfo(name: 'Fenugreek', subtitle: 'Short cycle herb', icon: Icons.eco),
-    CropInfo(name: 'Mustard Greens', subtitle: 'Cool transition crop', icon: Icons.energy_savings_leaf),
-    CropInfo(name: 'Radish', subtitle: 'Fast maturing root', icon: Icons.spa),
+    CropInfo(name: 'Fenugreek', subtitle: '2 weeks • 20 seed/pack', icon: Icons.grass, price: 9),
+    CropInfo(name: 'Mustard', subtitle: '3 weeks • 18 seed/pack', icon: Icons.energy_savings_leaf, price: 10),
+    CropInfo(name: 'Radish', subtitle: '5 weeks • 16 seed/pack', icon: Icons.spa, price: 11),
   ],
   PlantSeason.winter: [
-    CropInfo(name: 'Carrot', subtitle: 'Best sweetness in cool weather', icon: Icons.grass),
-    CropInfo(name: 'Peas', subtitle: 'Winter-friendly climber', icon: Icons.park),
-    CropInfo(name: 'Dill', subtitle: 'Cold tolerant herb', icon: Icons.local_florist),
+    CropInfo(name: 'Carrot', subtitle: '7 weeks • 20 seed/pack', icon: Icons.grass, price: 13),
+    CropInfo(name: 'Peas', subtitle: '6 weeks • 15 seed/pack', icon: Icons.park, price: 12),
+    CropInfo(name: 'Dill', subtitle: '4 weeks • 18 seed/pack', icon: Icons.eco, price: 8),
   ],
   PlantSeason.yearRound: [
-    CropInfo(name: 'Aloe Vera', subtitle: 'Low-maintenance medicinal plant', icon: Icons.spa),
-    CropInfo(name: 'Lemongrass', subtitle: 'Perennial aromatic grass', icon: Icons.grass),
-    CropInfo(name: 'Curry Leaf', subtitle: 'Evergreen kitchen tree', icon: Icons.forest),
+    CropInfo(name: 'Tulsi', subtitle: '4 weeks • starter set', icon: Icons.local_florist, price: 10),
+    CropInfo(name: 'Lemongrass', subtitle: '6 weeks • starter set', icon: Icons.grass, price: 11),
+    CropInfo(name: 'Curry Leaf', subtitle: '8 weeks • sapling', icon: Icons.forest, price: 17),
   ],
 };
 
-class SeasonCatalogPage extends StatefulWidget {
-  const SeasonCatalogPage({super.key});
+class MarketplacePage extends StatefulWidget {
+  const MarketplacePage({super.key});
 
   @override
-  State<SeasonCatalogPage> createState() => _SeasonCatalogPageState();
+  State<MarketplacePage> createState() => _MarketplacePageState();
 }
 
-class _SeasonCatalogPageState extends State<SeasonCatalogPage>
-    with SingleTickerProviderStateMixin {
-  PlantSeason selectedSeason = PlantSeason.spring;
-  late final AnimationController _animationController;
+class _MarketplacePageState extends State<MarketplacePage> {
+  PlantSeason _selectedSeason = PlantSeason.spring;
   late final PlantApiService _apiService;
-  late Future<List<CropInfo>> _seasonCropsFuture;
+  late Future<List<CropInfo>> _cropsFuture;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat(reverse: true);
     _apiService = PlantApiService();
-    _seasonCropsFuture = _loadSeasonCrops(selectedSeason);
+    _cropsFuture = _loadSeasonCrops(_selectedSeason);
   }
 
   Future<List<CropInfo>> _loadSeasonCrops(PlantSeason season) async {
@@ -126,128 +118,134 @@ class _SeasonCatalogPageState extends State<SeasonCatalogPage>
   CropInfo _toCrop(PlantListItem item) {
     return CropInfo(
       name: item.primaryCommonName.isNotEmpty ? item.primaryCommonName : item.scientificName,
-      subtitle:
-          '${item.plantType.toUpperCase()} • ${item.lifecycle} • Suitability ${item.suitabilityScore.toStringAsFixed(0)}%',
+      subtitle: '${item.lifecycle} • suitability ${item.suitabilityScore.toStringAsFixed(0)}%',
       icon: _iconForType(item.plantType),
+      price: 14,
     );
   }
 
-  IconData _iconForType(String plantType) {
-    switch (plantType) {
-      case 'crop':
-        return Icons.grass;
-      case 'tree':
-        return Icons.forest;
-      case 'weed':
-        return Icons.warning_amber_rounded;
+  IconData _iconForType(String type) {
+    switch (type) {
       case 'herb':
         return Icons.local_florist;
+      case 'tree':
+        return Icons.forest;
+      case 'crop':
+        return Icons.grass;
       default:
         return Icons.eco;
     }
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+  void _selectSeason(PlantSeason season) {
+    setState(() {
+      _selectedSeason = season;
+      _cropsFuture = _loadSeasonCrops(season);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Terra Herbarium'),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-      ),
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          AnimatedSeasonBackground(
-            animation: _animationController,
-            colors: selectedSeason.gradientColors,
-            icon: selectedSeason.icon,
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 1080;
+            return Padding(
+              padding: const EdgeInsets.all(18),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Select Season',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 44,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: PlantSeason.values
-                          .map(
-                            (season) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ChoiceChip(
-                                label: Text(season.label),
-                                selected: season == selectedSeason,
-                                selectedColor: Colors.white,
-                                backgroundColor: Colors.white.withValues(alpha: 0.25),
-                                side: BorderSide.none,
-                                onSelected: (_) {
-                                  setState(() {
-                                    selectedSeason = season;
-                                    _seasonCropsFuture = _loadSeasonCrops(season);
-                                  });
-                                },
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  _SeasonChips(selected: _selectedSeason, onSelected: _selectSeason),
+                  const SizedBox(height: 14),
                   Expanded(
                     child: FutureBuilder<List<CropInfo>>(
-                      future: _seasonCropsFuture,
+                      future: _cropsFuture,
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(color: Colors.white),
-                          );
+                        final crops = snapshot.data ?? (_fallbackSeasonCrops[_selectedSeason] ?? const []);
+                        if (wide) {
+                          return _DesktopLayout(crops: crops);
                         }
-
-                        final crops = snapshot.data ?? (_fallbackSeasonCrops[selectedSeason] ?? const []);
-                        if (crops.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'No plants available for this season yet.',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                            ),
-                          );
-                        }
-
-                        return ListView.separated(
-                          itemCount: crops.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final crop = crops[index];
-                            return CropCard(
-                              season: selectedSeason,
-                              crop: crop,
-                            );
-                          },
-                        );
+                        return _MobileLayout(crops: crops);
                       },
                     ),
                   ),
                 ],
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SeasonChips extends StatelessWidget {
+  const _SeasonChips({required this.selected, required this.onSelected});
+
+  final PlantSeason selected;
+  final ValueChanged<PlantSeason> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (context, index) {
+          final season = PlantSeason.values[index];
+          return ChoiceChip(
+            label: Text(season.label),
+            selected: selected == season,
+            onSelected: (_) => onSelected(season),
+            selectedColor: const Color(0xFF8BE044),
+            labelStyle: TextStyle(
+              color: selected == season ? const Color(0xFF103619) : const Color(0xFF2F4732),
+              fontWeight: FontWeight.w600,
+            ),
+            side: BorderSide.none,
+            backgroundColor: Colors.white,
+          );
+        },
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemCount: PlantSeason.values.length,
+      ),
+    );
+  }
+}
+
+class _DesktopLayout extends StatelessWidget {
+  const _DesktopLayout({required this.crops});
+
+  final List<CropInfo> crops;
+
+  @override
+  Widget build(BuildContext context) {
+    final first = crops.isNotEmpty ? crops.first : const CropInfo(name: 'Bok Choy', subtitle: '3 weeks • 12 seed/pack', icon: Icons.eco, price: 14);
+    final second = crops.length > 1 ? crops[1] : first;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFDDE8D4),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: _ExplorePanel(primary: first),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: _SeasonPanel(crops: crops),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: _DetailPanel(primary: first, secondary: second),
             ),
           ),
         ],
@@ -256,96 +254,277 @@ class _SeasonCatalogPageState extends State<SeasonCatalogPage>
   }
 }
 
-class AnimatedSeasonBackground extends StatelessWidget {
-  const AnimatedSeasonBackground({
-    super.key,
-    required this.animation,
-    required this.colors,
-    required this.icon,
-  });
+class _MobileLayout extends StatelessWidget {
+  const _MobileLayout({required this.crops});
 
-  final Animation<double> animation;
-  final List<Color> colors;
-  final IconData icon;
+  final List<CropInfo> crops;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) {
-        final shift = math.sin(animation.value * math.pi * 2) * 90;
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(-1 + shift / 180, -1),
-              end: Alignment(1, 1 - shift / 180),
-              colors: colors,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -60,
-                top: 110 + shift,
-                child: Icon(icon, size: 220, color: Colors.white.withValues(alpha: 0.16)),
-              ),
-              Positioned(
-                left: -30,
-                bottom: 70 - shift,
-                child: Icon(Icons.grass, size: 180, color: Colors.white.withValues(alpha: 0.12)),
-              ),
-            ],
-          ),
-        );
-      },
+    final first = crops.isNotEmpty ? crops.first : const CropInfo(name: 'Bok Choy', subtitle: '3 weeks • 12 seed/pack', icon: Icons.eco, price: 14);
+    final second = crops.length > 1 ? crops[1] : first;
+
+    return ListView(
+      children: [
+        SizedBox(height: 420, child: _ExplorePanel(primary: first)),
+        const SizedBox(height: 12),
+        SizedBox(height: 500, child: _SeasonPanel(crops: crops)),
+        const SizedBox(height: 12),
+        SizedBox(height: 620, child: _DetailPanel(primary: first, secondary: second)),
+      ],
     );
   }
 }
 
-class CropCard extends StatelessWidget {
-  const CropCard({super.key, required this.season, required this.crop});
+class _ExplorePanel extends StatelessWidget {
+  const _ExplorePanel({required this.primary});
 
-  final PlantSeason season;
+  final CropInfo primary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0D4A24), Color(0xFF1F7035)],
+        ),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Explore\na wide\nvariety of\nseeds',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 24, height: 1.1),
+                ),
+              ),
+              _LeafBadge(icon: primary.icon),
+            ],
+          ),
+          const Spacer(),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: BoxDecoration(color: const Color(0xFF8BE044), borderRadius: BorderRadius.circular(16)),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.eco, color: Color(0xFF0D3A18)),
+                SizedBox(width: 8),
+                Text('Start your green journey!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0D3A18))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SeasonPanel extends StatelessWidget {
+  const _SeasonPanel({required this.crops});
+
+  final List<CropInfo> crops;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(colors: [Color(0xFF0F5A2B), Color(0xFF0A3D1E)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.wb_sunny, color: Colors.amber, size: 34),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Sunny, 30°\nMonday, 13 Feb 2024', style: TextStyle(color: Colors.white70, fontSize: 18, height: 1.2)),
+              ),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.white24,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                  onPressed: () {},
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text('Perfect for\nthis season!', style: TextStyle(color: Colors.white, fontSize: 50, fontWeight: FontWeight.w600, height: 0.95)),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.separated(
+              itemBuilder: (context, index) => _SeedCard(crop: crops[index]),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemCount: crops.length,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+            decoration: BoxDecoration(color: const Color(0xFFDDE8D4), borderRadius: BorderRadius.circular(24)),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.home, color: Color(0xFF123A1D)),
+                SizedBox(width: 18),
+                Icon(Icons.article, color: Color(0xFF56785D)),
+                SizedBox(width: 18),
+                Icon(Icons.person, color: Color(0xFF56785D)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailPanel extends StatelessWidget {
+  const _DetailPanel({required this.primary, required this.secondary});
+
+  final CropInfo primary;
+  final CropInfo secondary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(color: const Color(0xFF0E4D27), borderRadius: BorderRadius.circular(24)),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: CircleAvatar(
+                  backgroundColor: const Color(0xFFDDE8D4),
+                  child: IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.arrow_back, color: Color(0xFF1A4825)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(primary.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 40)),
+              const SizedBox(height: 6),
+              Text(primary.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 20)),
+              const SizedBox(height: 20),
+              const Text('Choose the Right Location\n• 6+ hours direct sunlight\n• Well-drained rich soil', style: TextStyle(color: Colors.white70, height: 1.4, fontSize: 17)),
+              const SizedBox(height: 16),
+              const Text('Prepare the Soil\n• Loosen top 8 inches\n• Mix compost and organic matter', style: TextStyle(color: Colors.white70, height: 1.4, fontSize: 17)),
+              const Spacer(),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Container(
+                  decoration: BoxDecoration(color: const Color(0xFF8BE044), borderRadius: BorderRadius.circular(20)),
+                  child: IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.shopping_cart, size: 30, color: Color(0xFF123A1D)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 4,
+          top: 140,
+          child: _FloatingSeedCard(crop: secondary),
+        ),
+      ],
+    );
+  }
+}
+
+class _SeedCard extends StatelessWidget {
+  const _SeedCard({required this.crop});
+
   final CropInfo crop;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(16),
-      ),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: season.gradientColors.last.withValues(alpha: 0.2),
-            child: Icon(crop.icon, color: season.gradientColors.last),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  crop.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: const Color(0xFFDDE8D4), borderRadius: BorderRadius.circular(10)),
+                  child: Text('\$${crop.price}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF184625))),
                 ),
+                const SizedBox(height: 8),
+                Text(crop.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 28, color: Color(0xFF184625))),
                 const SizedBox(height: 4),
-                Text(
-                  crop.subtitle,
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontWeight: FontWeight.w500,
+                Text(crop.subtitle, style: const TextStyle(color: Color(0xFF5F7E66), fontSize: 18)),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(color: const Color(0xFF8BE044), borderRadius: BorderRadius.circular(14)),
+                  child: IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.shopping_cart, color: Color(0xFF123A1D)),
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+          _LeafBadge(icon: crop.icon),
         ],
       ),
+    );
+  }
+}
+
+class _FloatingSeedCard extends StatelessWidget {
+  const _FloatingSeedCard({required this.crop});
+
+  final CropInfo crop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: -0.12,
+      child: SizedBox(
+        width: 320,
+        child: _SeedCard(crop: crop),
+      ),
+    );
+  }
+}
+
+class _LeafBadge extends StatelessWidget {
+  const _LeafBadge({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 110,
+      height: 110,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFFDDE8D4),
+        border: Border.all(color: Colors.white54, width: 3),
+      ),
+      child: Icon(icon, size: 56, color: const Color(0xFF2D7A3E)),
     );
   }
 }
