@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "terraherb"
+version = "0.1.0"
+authors = [
+  { name="Terraherb Engineering Group", email="engineering@terraherb.example.com" },
+]
+description = "Intelligent Herbal Intelligence Engine - AI/ML Substrate"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/fallofpheonix/terraherb"
+"Bug Tracker" = "https://github.com/fallofpheonix/terraherb/issues"
+"Repository" = "https://github.com/fallofpheonix/terraherb"
+
+[tool.setuptools]
+packages = ["terraherb"]
+package-dir = {"" = "."}
