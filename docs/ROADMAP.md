@@ -1,27 +1,21 @@
-# 🗺️ ROADMAP.md — Strategic Evolution
+# Roadmap
 
-This document outlines the planned development phases for the **Terraherb** herbal intelligence engine.
+## Phase 1 - Baseline Stability
+- Stabilize MobileNetV2 training/inference path.
+- Complete API validation and endpoint tests.
+- Normalize dataset substrate layout.
 
-## 🚀 Phase 1: Substrate Hardening (Current)
-- Establish documentation and repository structure.
-- Formalize API contracts between Go and Flutter.
-- Implement basic CRUD for botanical taxons.
+## Phase 2 - Accuracy Optimization
+- Execute TensorFlow Strategy 98 experiments.
+- Compare PyTorch vs TensorFlow confusion matrices.
+- Improve calibration and low-confidence handling.
 
-## 🧪 Phase 2: Knowledge Graph Expansion
-- Integrate multi-source therapeutic data.
-- Implement phytochemical profiling engine.
-- Establish relationship mapping (Herb-Herb interactions).
+## Phase 3 - Knowledge Expansion
+- Expand UCI/GBIF mapping accuracy.
+- Add caching/timeout resilience and retries.
+- Introduce optional offline knowledge snapshots.
 
-## 📱 Phase 3: Operational UI (v1.1)
-- Develop advanced search and filtering in Flutter.
-- Implement offline-first data caching.
-- Design interactive botanical identification flows.
-
-## 🌍 Phase 4: Ecosystem Integration
-- Open-access API for researchers.
-- Community-driven knowledge contribution protocol.
-- Automated data validation using AI agents.
-
----
-
-*Phase dates are subject to architectural priority.*
+## Phase 4 - Operational Hardening
+- Containerized deploy profiles.
+- Monitoring for latency/error rates.
+- Reproducible experiment tracking.

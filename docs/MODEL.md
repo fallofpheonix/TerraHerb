@@ -1,41 +1,31 @@
-# 🧠 MODEL.md — Deep Learning Architecture
+# Model
 
-Terraherb supports two high-performance implementation paths: a Professional Research-grade **PyTorch** substrate and an Academic-standard **TensorFlow** substrate.
+## PyTorch Path (Primary)
+- Backbone: MobileNetV2
+- Head: Linear(1280->512)->ReLU->Dropout->Linear(512->38)
+- Output: log-softmax
+- Loss: NLLLoss
+- Optimizer: AdamW
 
----
+## Training
+- Two-phase schedule:
+1. Head-only training (backbone frozen)
+2. Fine-tune top backbone layers with lower LR
+- Scheduler: CosineAnnealingLR
+- Early stopping on validation accuracy
 
-## 🏗️ Option A: Professional Substrate (PyTorch)
-- **Architecture**: MobileNetV2 (Pre-trained on ImageNet).
-- **Inference**: High-speed, lightweight CPU/GPU execution.
-- **Optimization**: AdamW with StepLR scheduler.
-- **Implementation**: [`terraherb/models/mobilenet_classifier.py`](../terraherb/models/mobilenet_classifier.py)
+## TensorFlow Path (Strategy 98)
+- Backbone: EfficientNetB0
+- Stage 1: frozen backbone, train classifier head
+- Stage 2: unfreeze top layers, low-LR fine-tuning
+- Goal: improve top-1 accuracy toward 97-98%
 
----
+## Metrics
+- Top-1 Accuracy
+- Top-5 Accuracy
+- Validation loss
+- Inference latency
 
-## 🏗️ Option B: Academic Standard (TensorFlow)
-- **Architecture**: **EfficientNetB0** (Transfer Learning).
-- **Framework**: TensorFlow 2.x / Keras.
-- **Accuracy Potential**: **97.8%** on PlantVillage.
-- **Key Strategy ("Strategy 98")**:
-  - **Two-Stage Fine-Tuning**: Initial training of the head (1e-3 LR) followed by unfreezing the top 20 layers of the backbone (1e-5 LR).
-  - **Advanced Augmentation**: Rotation (30°), Zoom (0.2), Shear (0.2), and Brightness Jitter.
-  - **Callbacks**: `ReduceLROnPlateau` and `EarlyStopping` for optimal convergence.
-- **Implementation**: [`terraherb/training/train_tf.py`](../terraherb/training/train_tf.py)
-
----
-
-## 🎯 Evaluation Metrics (PlantVillage Dataset)
-| Metric | PyTorch (MobileNetV2) | TensorFlow (EfficientNetB0) |
-| :--- | :--- | :--- |
-| **Top-1 Accuracy** | 92.8% | **97.8%** |
-| **Top-5 Accuracy** | 98.5% | **99.2%** |
-| **Precision** | 0.93 | **0.96** |
-| **Inference Latency** | ~122ms | ~155ms |
-
-## 🚀 Training Strategy
-1. **Data Augmentation**: Rotation (20°), Zoom (0.2), Horizontal Flip, and Rescaling (1./255).
-2. **Optimizer**: Adam (Standard) or AdamW (Professional).
-3. **Loss**: Categorical Cross-Entropy for 38 distinct botanical classes.
-
----
-*Intelligence is the result of focused architecture.*
+## Artifacts
+- PyTorch weights: `models/saved/mobilenet_v2*.pth`
+- TensorFlow model: `models/saved/plant_disease_model_strat98.h5`

@@ -1,22 +1,23 @@
-# 📦 DEPLOYMENT.md — Production Orchestration
+# Deployment
 
-## 🏛️ Strategy
-Terraherb is designed for containerized deployment using **Docker** and **Kubernetes**.
+## Runtime Components
+- FastAPI service (`terraherb.api.main:app`)
+- React frontend (`frontend/` static build)
 
-## 🛠️ Docker Orchestration
-We use the root `docker-compose.yml` for local production-like environments.
-
+## Local Deployment
 ```bash
-docker-compose up -d --build
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+uvicorn terraherb.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-## 🏗️ Environment Configuration
-Backend secrets are managed via `.env` files in the `backend/` directory.
+```bash
+cd frontend
+npm install
+npm run build
+```
 
-## 📱 Client Distribution
-- **Android/iOS**: CI/CD pipelines generate signed binaries for App Store/Play Store distribution.
-- **Web**: Static hosting for the Flutter Web build.
-
----
-
-*Stability is a function of structure.*
+## Production Notes
+- Run FastAPI behind a reverse proxy.
+- Configure request size limits and CORS origins.
+- Keep model weights outside image layers where possible.

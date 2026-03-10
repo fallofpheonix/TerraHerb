@@ -1,23 +1,30 @@
-# 📊 DATASET.md — Plant Disease Classification (Merged)
+# Dataset
 
-Terraherb utilizes a **Merged Plant Disease Classification Dataset**, which combines multiple high-fidelity botanical image sources for robust species and disease identification.
+## Primary Dataset: PlantVillage
+- Classes: 38
+- Images: ~54,000
+- Task: Multi-class crop disease/health classification
 
-## 📈 Dataset Statistics
-- **Source**: Kaggle (alinedobrovsky/plant-disease-classification-merged-dataset)
-- **Content**: Comprehensive collection of healthy and diseased plant leaves.
-- **Ingestion**: Managed via `kagglehub` for versioned data provenance.
+## Canonical Storage
+- `datasets_substrate/raw/plant_disease_merged/`
+- `datasets_substrate/processed/`
+- `datasets_substrate/external/`
 
-## 🌽 Species Coverage
-The dataset covers 14 crop species including:
-- Apple, Blueberry, Cherry, Corn, Grape, Orange, Peach, Pepper, Potato, Raspberry, Soybean, Squash, Strawberry, and Tomato.
+## Ingestion
+- Script: `terraherb/scripts/ingest_data.py`
+- Provider: KaggleHub dataset `alinedobrovsky/plant-disease-classification-merged-dataset`
 
-## 🛠️ Data Processing Pipeline
-1. **Splitting**: 75% Training, 15% Validation, 10% Testing.
-2. **Augmentation**:
-   - Random Horizontal Flip
-   - Random Color Jitter (Brightness/Contrast)
-   - Random Affine (Rotation/Translation)
-3. **Normalization**: Scaling pixel values to [0, 1] followed by ImageNet mean/std normalization.
+## Split Strategy
+- Train: 75%
+- Validation: 15%
+- Test: 10%
+- Stratified by label
 
-## 📂 Implementation
-Refer to [`terraherb/datasets/plantvillage_loader.py`](../terraherb/datasets/plantvillage_loader.py) for the PyTorch `Dataset` implementation.
+## Augmentation
+- Random crop/flip/rotation/affine
+- Color jitter
+- ImageNet normalization
+
+## Local Knowledge Dataset (UCI Plants)
+- Path: `datasets_substrate/external/uci_plants/plants.data`
+- Usage: distribution metadata enrichment in `KnowledgeRetriever`

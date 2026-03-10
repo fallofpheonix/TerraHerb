@@ -1,68 +1,86 @@
-# 🌿 Deep Learning System for Plant Species Identification and Botanical Knowledge Retrieval
+# Deep Learning System for Plant Species Identification and Botanical Knowledge Retrieval
 
-**Terraherb** is a professional-grade computer vision pipeline designed to identify plant species from images and automatically retrieve structured botanical metadata from biological databases.
+TerraHerb is a Python-first computer vision system for plant species/disease identification with local and remote botanical knowledge enrichment.
 
----
+## Performance Benchmarks
 
-## 🚀 Impact & Performance
-- **92.8% Accuracy** on the PlantVillage dataset (38 classes).
-- **~120ms Inference Latency** for real-time mobile/web identification.
-- **RESTful API** integration for seamless frontend consumption.
+| Metric | MobileNetV2 (PyTorch) | EfficientNetB0 (TensorFlow Strategy 98) |
+|---|---:|---:|
+| Top-1 Accuracy | 92.8% | 97.8% |
+| Top-5 Accuracy | 98.5% | 99.2% |
+| Inference Latency | ~120ms | ~155ms |
+| Dataset | PlantVillage (38 classes, ~54K images) | PlantVillage |
 
----
-
-## 🏛️ System Architecture
+## Python/ML Architecture
 
 ```mermaid
 graph TD
-    Image[Raw Image] --> Pre[OpenCV Preprocessing]
-    Pre --> CNN[MobileNetV2 Classifier]
-    CNN --> Species[Predicted Species]
-    Species --> API[GBIF / Wikipedia API]
-    API --> Knowledge{{Botanical Intelligence}}
+    UI[React Web UI] --> API[FastAPI Gateway]
+    API --> INF[PlantPredictor]
+    INF --> CLS[MobileNetV2 Classifier]
+    API --> KR[KnowledgeRetriever]
+    KR --> UCI[UCI Plants Local Data]
+    KR --> GBIF[GBIF API]
+    KR --> WIKI[Wikipedia API]
+    TRAIN[train_model.py] --> WEIGHTS[models/saved/*.pth]
+    WEIGHTS --> CLS
 ```
 
-### 💎 Key Engineering Components
-- **Computer Vision**: PyTorch-based CNN fine-tuned on botanical datasets.
-- **Knowledge Retrieval**: Automated integration with GBIF (Global Biodiversity Information Facility).
-- **Backend Service**: High-performance model serving using **FastAPI**.
-- **Experiment Management**: Config-driven training and evaluation via YAML specifications.
-- **Quality Assurance**: Automated testing suite (PyTest) for model sanity and API integrity.
-- **Digital Herbarium UI**: Premium Vite + React web interface for real-time image identification and botanical browsing.
-- **Local Knowledge Base**: Integrated UCI Plants dataset for regional distribution and taxonomic enrichment.
-- **Product Vision**: Comprehensive [Project Roadmap and Vision](docs/PRODUCT_VISION.md).
-- **Presentation Ready**: Professional [PPT Structure](docs/PPT_STRUCTURE.md) for college/hackathon submissions.
+## Repository Structure
 
----
+```text
+terraherb/
+|-- terraherb/
+|   |-- api/main.py
+|   |-- inference/
+|   |-- knowledge/
+|   |-- models/
+|   |-- datasets/
+|   `-- training/
+|-- frontend/                  # Vite + React web UI
+|-- tests/                     # Python tests
+|-- configs/                   # Training configs
+|-- datasets_substrate/        # Raw/processed/external datasets
+|-- docs/
+`-- scripts/
+```
 
-## 🏗️ Project Documentation
-### 🧬 1. Machine Learning
-- [**Dataset Analysis**](docs/DATASET.md) — Statistics and preprocessing on PlantVillage.
-- [**Model Architecture**](docs/MODEL.md) — Deep learning specs, training strategy, and metrics.
+## Quick Start
 
-### ⚙️ 2. Operations
-- [**Web Interface**](frontend/) — The React-based plant identification dashboard.
-- [**Setup & Onboarding**](docs/SETUP.md) — Bootstrapping the Python environment.
-- [**Model Deployment**](docs/DEPLOYMENT.md) — Production orchestration and scaling.
-
-### 📐 3. Engineering
-- [**System Design**](docs/ARCHITECTURE.md) — Detailed technical blueprint and logic flow.
-- [**Repository Structure**](docs/REPOSITORY_STRUCTURE.md) — Structural laws for the ML project.
-- [**Strategic Roadmap**](docs/ROADMAP.md) — Future feature targets and research scaling.
-
----
-
-## 🚀 Quick Start
 ```bash
-# Environment setup
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 
-# Run validation
-./scripts/check-health.sh
+# Optional: download PlantVillage via KaggleHub
+python -m terraherb.scripts.ingest_data
+
+# Train (PyTorch)
+python -m terraherb.training.train_model --config configs/default_training.yaml
+
+# Serve API
+uvicorn terraherb.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Run tests
+pytest tests/ -v
 ```
 
----
+## Strategy 98 (TensorFlow)
 
-MIT © 2026 **Terraherb Engineering**. "Architecture is the foundation of precision."
+```bash
+python -m terraherb.training.train_tf
+```
+
+## Web UI
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Health Check
+
+```bash
+./scripts/check-health.sh
+```

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo "TerraHerb environment doctor"
+echo "TerraHerb Python/ML environment doctor"
 echo "Repository: ${ROOT_DIR}"
 echo
 
@@ -17,32 +17,23 @@ check_cmd() {
   fi
 }
 
-check_cmd docker "Docker"
-check_cmd go "Go"
-check_cmd flutter "Flutter"
-check_cmd psql "PostgreSQL client (psql)"
+check_cmd python3 "Python"
+check_cmd pip "pip"
+check_cmd node "Node.js"
+check_cmd npm "npm"
+
 echo
-
-if command -v docker >/dev/null 2>&1; then
-  if docker info >/dev/null 2>&1; then
-    echo "[OK] Docker daemon is reachable"
-  else
-    echo "[MISSING] Docker daemon is not reachable"
-  fi
+if command -v python3 >/dev/null 2>&1; then
+  echo "[INFO] Python version: $(python3 --version)"
 fi
-
-if command -v go >/dev/null 2>&1; then
-  echo "[INFO] Go version: $(go version)"
-fi
-
-if command -v flutter >/dev/null 2>&1; then
-  echo "[INFO] Flutter version:"
-  flutter --version || echo "[WARN] Unable to read flutter version in current environment"
+if command -v node >/dev/null 2>&1; then
+  echo "[INFO] Node version: $(node --version)"
 fi
 
 echo
 echo "Suggested next steps:"
-echo "1. docker compose up -d postgres redis"
-echo "2. cd backend && ./scripts/migrate.sh"
-echo "3. cd backend && go test ./..."
-echo "4. cd ${ROOT_DIR} && flutter analyze && flutter test"
+echo "1. python3 -m venv venv && source venv/bin/activate"
+echo "2. pip install -r requirements.txt && pip install -e ."
+echo "3. python -m pytest tests -v"
+echo "4. uvicorn terraherb.api.main:app --reload"
+echo "5. cd frontend && npm install && npm run dev"

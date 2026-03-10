@@ -22,6 +22,6 @@ classifiers = [
 "Bug Tracker" = "https://github.com/fallofpheonix/terraherb/issues"
 "Repository" = "https://github.com/fallofpheonix/terraherb"
 
-[tool.setuptools]
-packages = ["terraherb"]
-package-dir = {"" = "."}
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["terraherb*"]

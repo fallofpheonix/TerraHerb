@@ -135,3 +135,7 @@ models/saved/*.joblib
 # macOS
 .DS_Store
 datasets_substrate/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

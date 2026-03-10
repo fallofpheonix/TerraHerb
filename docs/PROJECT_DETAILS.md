@@ -1,21 +1,18 @@
-# PROJECT_DETAILS
+# Project Details
 
 ## Project
-
 - Name: TerraHerb
-- Type: Full-stack mobile + backend MVP
-- Domain: Plant intelligence for India
+- Type: Python ML + Web UI
+- Domain: Plant species and disease intelligence
 
 ## Objectives
-
-- Deliver seasonal and climate-aware plant discovery.
-- Maintain deterministic backend contracts and migration safety.
-- Keep architecture simple, debuggable, and extensible.
+- Reliable image-based classification for 38 PlantVillage classes.
+- Deterministic, testable inference and training pipelines.
+- Enriched botanical output using local + remote knowledge sources.
 
 ## Deliverables
-
-- Flutter app
-- Go API
-- DB schema and migrations
-- Observability and CI
-- Docs and governance
+- `terraherb/` Python package
+- FastAPI inference API
+- React frontend
+- Dataset ingestion and health tooling
+- Technical documentation and tests
