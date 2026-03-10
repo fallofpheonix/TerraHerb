@@ -2,7 +2,54 @@
 
 This document provides a deep-dive into the technical execution and sequence flow of the **Terraherb** AI substrate.
 
-## 🏛️ System Topology
+## 🏛️ System Topology (Conceptual Flow)
+```text
+                ┌──────────────────────────┐
+                │        User (Mobile App) │
+                │      Flutter / Web App   │
+                └─────────────┬────────────┘
+                              │
+                              │ Upload Plant Image
+                              │
+                ┌─────────────▼────────────┐
+                │        API Gateway       │
+                │       Flask / FastAPI    │
+                └─────────────┬────────────┘
+                              │
+                              │
+              ┌───────────────▼───────────────┐
+              │      Image Processing Layer    │
+              │  Resize • Normalize • Filter   │
+              └───────────────┬───────────────┘
+                              │
+                              │
+                ┌─────────────▼────────────┐
+                │   ML Model (CNN Model)   │
+                │  Plant Disease Detector  │
+                └─────────────┬────────────┘
+                              │
+                              │ Prediction Result
+                              │
+                ┌─────────────▼────────────┐
+                │  Recommendation Engine   │
+                │ Treatment + Prevention   │
+                └─────────────┬────────────┘
+                              │
+                              │
+                ┌─────────────▼────────────┐
+                │         Database          │
+                │  Plant Info + Diseases    │
+                │   MongoDB / Firebase      │
+                └─────────────┬────────────┘
+                              │
+                              │
+                ┌─────────────▼────────────┐
+                │     Response to App       │
+                │ Disease + Cure + Tips     │
+                └───────────────────────────┘
+```
+
+## 🏗️ Detailed Architecture - Product Interaction
 ```mermaid
 graph LR
     subgraph Frontend
@@ -35,7 +82,7 @@ graph LR
 ## 🔄 Interaction Sequence
 1. **User Upload**: A raw image is submitted to the `/identify` endpoint.
 2. **Preprocessing**: The image is resized to 224x224 and normalized using ImageNet statistics.
-3. **Neural Inference**: The PyTorch model performs a forward pass to determine species/health class.
+3. **Neural Inference**: The model (PyTorch/TF) performs a forward pass to determine species/health class.
 4. **Knowledge Retrieval**: The system queries the local UCI dataset and remote biological APIs.
 5. **Response Synthesis**: Classification results and botanical metadata are merged into a single JSON response.
 
