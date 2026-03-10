@@ -1,38 +1,43 @@
-# 🏛️ ARCHITECTURE.md — System Blueprint
+# 🧬 Architectural Blueprint — Internal Logic
 
-Terraherb is a **modular computer vision system** optimized for species identification and metadata enrichment.
+This document provides a deep-dive into the technical execution and sequence flow of the **Terraherb** AI substrate.
 
-## 🏗️ Pipeline Overview
-The system operates as a sequential data pipeline:
-1. **Preprocessing Layer**: OpenCV routines for resizing, normalization, and noise reduction.
-2. **Inference Layer**: MobileNetV2 CNN (PyTorch) for high-probability species classification.
-3. **Retrieval Layer**: Asynchronous queries to GBIF and Wikipedia for taxonomic and medicinal data.
-4. **Service Layer**: FastAPI REST endpoints for external system interaction.
-
-## 🧩 Directory Responsibilities
-| Path | Ownership | Responsibility |
-| :--- | :--- | :--- |
-| `terraherb/api/` | Systems Eng | FastAPI service and REST interfaces. |
-| `terraherb/models/` | ML Eng | Model architecture and weight management. |
-| `terraherb/training/` | ML Eng | Training loops, loss functions, and optimization. |
-| `terraherb/knowledge/` | Data Eng | Biological API clients and data parsers. |
-| `terraherb/datasets/` | Data Eng | PyTorch data loaders and augmentation logic. |
-
-## 🔄 Sequence Flow
+## 🏛️ System Topology
 ```mermaid
-sequenceDiagram
-    participant User
-    participant API as FastAPI Backend
-    participant ML as MobileNetV2 (PyTorch)
-    participant KB as Knowledge API (GBIF)
+graph LR
+    subgraph Frontend
+        Web[React Digital Herbarium]
+    end
+    subgraph API_Layer
+        FastAPI[FastAPI Gateway]
+        Ingest[Image Ingestion]
+    end
+    subgraph ML_Substrate
+        CNN[MobileNetV2 Engine]
+        Weights[(Saved Weights .pth)]
+    end
+    subgraph Knowledge_Base
+        UCI[UCI Plants Data]
+        Remote[GBIF / Wikipedia API]
+    end
 
-    User->>API: POST /identify (image)
-    API->>ML: Inference Request
-    ML-->>API: Result: "Rosa chinensis" (Conf: 0.98)
-    API->>KB: Fetch Taxonomy for "Rosa chinensis"
-    KB-->>API: Family: Rosaceae, Status: Vulnerable
-    API-->>User: Structured Report (JSON)
+    Web -- POST /identify --> FastAPI
+    FastAPI --> Ingest
+    Ingest --> CNN
+    CNN -- Infer --> Weights
+    Weights -- Class ID --> FastAPI
+    FastAPI -- Enrich --> UCI
+    FastAPI -- Query --> Remote
+    UCI & Remote -- Metadata --> FastAPI
+    FastAPI -- Structured Report --> Web
 ```
 
+## 🔄 Interaction Sequence
+1. **User Upload**: A raw image is submitted to the `/identify` endpoint.
+2. **Preprocessing**: The image is resized to 224x224 and normalized using ImageNet statistics.
+3. **Neural Inference**: The PyTorch model performs a forward pass to determine species/health class.
+4. **Knowledge Retrieval**: The system queries the local UCI dataset and remote biological APIs.
+5. **Response Synthesis**: Classification results and botanical metadata are merged into a single JSON response.
+
 ---
-*Precision. Performance. Provenance.*
+*Derived by AI. Built for Humanity.*
