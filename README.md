@@ -30,6 +30,8 @@ graph TD
 - **Quality Assurance**: Automated testing suite (PyTest) for model sanity and API integrity.
 - **Digital Herbarium UI**: Premium Vite + React web interface for real-time image identification and botanical browsing.
 - **Local Knowledge Base**: Integrated UCI Plants dataset for regional distribution and taxonomic enrichment.
+- **Product Vision**: Comprehensive [Project Roadmap and Vision](docs/PRODUCT_VISION.md).
+- **Presentation Ready**: Professional [PPT Structure](docs/PPT_STRUCTURE.md) for college/hackathon submissions.
 
 ---
 
