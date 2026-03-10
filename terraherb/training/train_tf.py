@@ -24,10 +24,10 @@ def train_tf_strategy_98():
         validation_split=0.2
     )
 
-    train_dir = "data/raw/images" 
+    train_dir = "datasets_substrate/raw/images/color" 
     
     if not os.path.exists(train_dir):
-        print(f"⚠️ Training directory {train_dir} not found. Run ingest_data.py first.")
+        print(f"⚠️ Training directory {train_dir} not found. Ensure datasets are moved correctly.")
         return
 
     train_generator = train_datagen.flow_from_directory(

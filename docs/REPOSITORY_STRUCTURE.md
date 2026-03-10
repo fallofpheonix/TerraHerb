@@ -6,20 +6,20 @@ This document defines the high-end structural standards for **Terraherb**, model
 | Parent | Layer | Responsibility |
 | :--- | :--- | :--- |
 | `terraherb/` | **Package** | The core library logic (Models, Datasets, Logic). |
+| `datasets_substrate/` | **Artifacts** | Unified storage for 3.5GB of raw and processed botanical data. |
 | `configs/` | **Governance** | YAML/JSON hyperparameter and experiment configurations. |
 | `docs/` | **Knowledge** | Flattened technical specifications and ML reports. |
-| `scripts/` | **CLI** | Entry points for training, evaluation, and deployment. |
+| `frontend/` | **Interface** | Vite + React Plant Identification Dashboard. |
+| `notebooks/` | **Research** | Experiment logs and Strategy 98 implementation reports. |
 | `tests/` | **Integrity** | Unit and integration tests for ML pipelines. |
-| `data/` | **Artifacts** | Raw and processed botanical image data (Gitignored). |
-| `models/` | **Storage** | Serialized model checkpoints and weights (Gitignored). |
 
 ## 🧬 Package Internals (`terraherb/`)
-- `datasets/`: PyTorch Dataset class and data augmentation policies.
-- `models/`: Model architecture definitions (MobileNetV2, etc.).
-- `training/`: Training engine (loops, loss functions, optimizers).
-- `inference/`: High-performance inference wrappers.
-- `knowledge/`: Biological API connectors (GBIF, Wikipedia).
 - `api/`: FastAPI model serving layer.
+- `datasets/`: PyTorch/TF data loaders and augmentation policies.
+- `inference/`: High-performance inference wrappers and predictors.
+- `knowledge/`: UCI Taxonomic Client and botanical metadata logic.
+- `models/`: Model architecture definitions (MobileNetV2, EfficientNetB0).
+- `training/`: Training engines for "Strategy 98" high-accuracy pipelines.
 
 ## 🛠️ Design Patterns
 1. **Config-Driven Development**: All hyperparameters reside in `configs/`, never hardcoded in scripts.
