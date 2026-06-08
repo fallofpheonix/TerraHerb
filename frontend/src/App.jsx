@@ -10,6 +10,14 @@ function App() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
+    const [scope, setScope] = useState(null);
+
+    React.useEffect(() => {
+        fetch(`${API_BASE}/identify/scope`)
+            .then(res => res.json())
+            .then(data => setScope(data.supported_crops))
+            .catch(err => console.error('Failed to load scope:', err));
+    }, []);
 
     const handleFileChange = (e) => {
         const selected = e.target.files[0];
@@ -82,6 +90,14 @@ function App() {
                 <p className="hero-subtitle">
                     Deep Learning Plant Identification &amp; Botanical Intelligence
                 </p>
+                {scope && (
+                    <div className="scope-pills" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem', maxWidth: '800px', marginInline: 'auto' }}>
+                        {Object.keys(scope).slice(0, 10).map(crop => (
+                            <span key={crop} style={{ background: 'rgba(255,255,255,0.1)', padding: '0.3rem 0.8rem', borderRadius: '100px', fontSize: '0.75rem', border: '1px solid rgba(255,255,255,0.2)' }}>{crop}</span>
+                        ))}
+                        <span style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem', opacity: 0.6 }}>+ {Object.keys(scope).length - 10} more</span>
+                    </div>
+                )}
             </header>
 
             <main>
@@ -161,14 +177,21 @@ function App() {
                                         className="confidence-fill"
                                         style={{
                                             width: `${confidencePct}%`,
-                                            background: result.low_confidence
-                                                ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
-                                                : 'linear-gradient(90deg, var(--leaf-primary), var(--leaf-secondary))',
+                                            background: result.status === 'unsupported'
+                                                ? 'linear-gradient(90deg, #ef4444, #7f1d1d)'
+                                                : result.low_confidence
+                                                    ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
+                                                    : 'linear-gradient(90deg, var(--leaf-primary), var(--leaf-secondary))',
                                         }}
                                     />
                                 </div>
-                                {result.low_confidence && (
-                                    <p style={{ color: 'var(--warn-color)', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                {result.status === 'unsupported' && (
+                                    <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.5rem', fontWeight: 700 }}>
+                                        🛑 Unsupported Crop Detected
+                                    </p>
+                                )}
+                                {result.status === 'uncertain' && (
+                                    <p style={{ color: '#f59e0b', fontSize: '0.8rem', marginTop: '0.5rem' }}>
                                         ⚠️ Low confidence — try a clearer image
                                     </p>
                                 )}
@@ -200,11 +223,23 @@ function App() {
 
                         {/* Main Result */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div className="glass-card">
+                            {result.status !== 'success' && (
+                                <div className="glass-card" style={{ borderLeft: `4px solid ${result.status === 'unsupported' ? '#ef4444' : '#f59e0b'}`, padding: '1.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <AlertTriangle color={result.status === 'unsupported' ? '#ef4444' : '#f59e0b'} style={{ marginRight: '0.75rem' }} />
+                                        <h3 style={{ margin: 0 }}>{result.status === 'unsupported' ? 'Unsupported Crop' : 'Uncertain Identification'}</h3>
+                                    </div>
+                                    <p style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>
+                                        {knowledge.message}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="glass-card" style={{ opacity: result.status === 'success' ? 1 : 0.5 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
                                     <Leaf color="var(--accent-gold)" style={{ marginRight: '0.75rem' }} />
                                     <h2 style={{ margin: 0 }}>Identification Result</h2>
-                                    {result.is_healthy && (
+                                    {result.is_healthy && result.status === 'success' && (
                                         <span className="badge-healthy">✓ Healthy</span>
                                     )}
                                 </div>

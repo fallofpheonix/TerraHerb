@@ -37,12 +37,12 @@ def test_ready_returns_200_when_loaded(client: TestClient) -> None:
     assert resp.json()["status"] == "ready"
 
 
-def test_classes_returns_38(client: TestClient) -> None:
+def test_classes_returns_88(client: TestClient) -> None:
     resp = client.get("/classes")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["count"] == 38
-    assert len(body["classes"]) == 38
+    assert body["count"] == 88
+    assert len(body["classes"]) == 88
 
 
 def test_treatment_returns_payload(client: TestClient) -> None:
@@ -97,8 +97,75 @@ def test_identify_success_with_stubbed_state(client: TestClient) -> None:
     assert body["knowledge"]["crop"] == "Tomato"
 
 
+def test_identify_low_confidence_skips_retrieval(client: TestClient) -> None:
+    predictor = MagicMock()
+    # Threshold is 0.70, so 0.65 is low confidence
+    predictor.predict.return_value = {
+        "species": "Apple___healthy",
+        "crop": "Apple",
+        "condition": "healthy",
+        "is_healthy": True,
+        "confidence": 0.65,
+        "low_confidence": True,
+        "top_predictions": [{"label": "Apple___healthy", "probability": 0.65}],
+    }
+    predictor.LOW_CONFIDENCE_THRESHOLD = 0.70
+
+    retriever = MagicMock(spec=KnowledgeRetriever)
+
+    api_module._state["predictor"] = predictor
+    api_module._state["retriever"] = retriever
+
+    resp = client.post("/identify", files={"file": ("leaf.jpg", _jpeg_bytes(), "image/jpeg")})
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["low_confidence"] is True
+    assert body["knowledge"]["status"] == "uncertain"
+    # Ensure retriever was NEVER called
+    retriever.fetch_plant_data.assert_not_called()
+
+
 def test_knowledge_retriever_remote_disabled() -> None:
     retriever = KnowledgeRetriever(enable_remote=False)
     result = retriever.fetch_plant_data("Apple___healthy")
     assert result["is_healthy"] is True
     assert result["taxonomy"]["kingdom"] == "Plantae"
+
+
+def test_knowledge_retriever_orange_canonical_lookup() -> None:
+    # This tests the logic added to avoid "Nesothele Orange"
+    retriever = KnowledgeRetriever(enable_remote=True)
+
+    # Mock GBIF client to return a lichen if we search for "Orange"
+    # and a plant if we search for "Citrus sinensis"
+    retriever._gbif = MagicMock()
+
+    def side_effect(q):
+        if q == "Citrus sinensis":
+            return {"kingdom": "Plantae", "scientificName": "Citrus sinensis", "family": "Rutaceae"}
+        return {"kingdom": "Fungi", "scientificName": "Nesothele Orange", "family": "Verrucariaceae"}
+
+    retriever._gbif.search_species.side_effect = side_effect
+
+    # This should use the map and search for "Citrus sinensis"
+    result = retriever.fetch_plant_data("Orange___Haunglongbing_(Citrus_greening)")
+
+    assert result["taxonomy"]["kingdom"] == "Plantae"
+    assert result["taxonomy"]["scientific_name"] == "Citrus sinensis"
+    # Ensure it searched for the scientific name
+    retriever._gbif.search_species.assert_called_with("Citrus sinensis")
+
+
+def test_knowledge_retriever_rejects_non_plantae() -> None:
+    retriever = KnowledgeRetriever(enable_remote=True)
+    retriever._gbif = MagicMock()
+    # Mock GBIF returning a Fungus
+    retriever._gbif.search_species.return_value = {"kingdom": "Fungi", "scientificName": "Some Fungus"}
+
+    result = retriever.fetch_plant_data("Apple___healthy")
+
+    # Should fall back to basic taxonomy and not include the Fungus data
+    assert result["taxonomy"]["kingdom"] == "Plantae"
+    assert "Some Fungus" not in str(result["taxonomy"])
+    assert result["taxonomy"]["scientific_name"] == "Apple"

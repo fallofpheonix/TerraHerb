@@ -38,7 +38,7 @@ class PlantPredictor:
       - Confidence-based warnings (low-confidence flag)
     """
 
-    LOW_CONFIDENCE_THRESHOLD = 0.55
+    LOW_CONFIDENCE_THRESHOLD = 0.70
 
     def __init__(
         self,
@@ -62,9 +62,9 @@ class PlantPredictor:
               - "is_healthy": bool — True if the plant appears healthy.
               - "confidence": float — model probability for the top class.
               - "low_confidence": bool — True if confidence < threshold.
-              - "top_predictions": list of top-3 predictions with label + probability.
+              - "top_predictions": list of top-5 predictions with label + probability.
         """
-        raw = self._classifier.predict(image_bytes, top_k=3)
+        raw = self._classifier.predict(image_bytes, top_k=5)
 
         parsed = _parse_class_label(raw["top_class"])
         confidence = raw["confidence"]

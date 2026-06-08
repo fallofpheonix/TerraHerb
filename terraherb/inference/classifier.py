@@ -13,51 +13,11 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
+from terraherb.inference.classes import PLANT_CLASSES
+
 logger = logging.getLogger(__name__)
 
-# 38 PlantVillage classes (species + health status)
-PLANT_CLASSES = [
-    "Apple___Apple_scab",
-    "Apple___Black_rot",
-    "Apple___Cedar_apple_rust",
-    "Apple___healthy",
-    "Blueberry___healthy",
-    "Cherry_(including_sour)___Powdery_mildew",
-    "Cherry_(including_sour)___healthy",
-    "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
-    "Corn_(maize)___Common_rust_",
-    "Corn_(maize)___Northern_Leaf_Blight",
-    "Corn_(maize)___healthy",
-    "Grape___Black_rot",
-    "Grape___Esca_(Black_Measles)",
-    "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)",
-    "Grape___healthy",
-    "Orange___Haunglongbing_(Citrus_greening)",
-    "Peach___Bacterial_spot",
-    "Peach___healthy",
-    "Pepper,_bell___Bacterial_spot",
-    "Pepper,_bell___healthy",
-    "Potato___Early_blight",
-    "Potato___Late_blight",
-    "Potato___healthy",
-    "Raspberry___healthy",
-    "Soybean___healthy",
-    "Squash___Powdery_mildew",
-    "Strawberry___Leaf_scorch",
-    "Strawberry___healthy",
-    "Tomato___Bacterial_spot",
-    "Tomato___Early_blight",
-    "Tomato___Late_blight",
-    "Tomato___Leaf_Mold",
-    "Tomato___Septoria_leaf_spot",
-    "Tomato___Spider_mites Two-spotted_spider_mite",
-    "Tomato___Target_Spot",
-    "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
-    "Tomato___Tomato_mosaic_virus",
-    "Tomato___healthy",
-]
-
-NUM_CLASSES = len(PLANT_CLASSES)  # 38
+NUM_CLASSES = len(PLANT_CLASSES)
 
 
 def preprocess_image(image_bytes: bytes) -> torch.Tensor:
@@ -118,34 +78,26 @@ class PlantClassifier:
         num_classes: int = NUM_CLASSES,
         device: Optional[str] = None,
     ) -> None:
-        import torchvision.models as tv_models
+        from terraherb.models.mobilenet_classifier import MobileNetClassifier
 
         self.device = torch.device(
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
         self.num_classes = num_classes
 
-        # Build backbone
-        self.model = tv_models.mobilenet_v2(weights=None)
-        self.model.classifier[1] = torch.nn.Sequential(
-            torch.nn.Linear(self.model.last_channel, 512),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.2),
-            torch.nn.Linear(512, num_classes),
-        )
-
         # Load weights if available
         try:
-            state = torch.load(model_path, map_location=self.device, weights_only=True)
-            self.model.load_state_dict(state)
-            logger.info("Loaded weights from %s", model_path)
+            self.model = MobileNetClassifier.from_pretrained(
+                path=model_path, 
+                num_classes=num_classes, 
+                device=str(self.device)
+            )
         except FileNotFoundError:
             logger.warning(
                 "Weight file not found at '%s'. Running with random weights.", model_path
             )
-
-        self.model.to(self.device)
-        self.model.eval()
+            self.model = MobileNetClassifier(num_classes=num_classes, pretrained=False).to(self.device)
+            self.model.eval()
 
     def predict(self, image_bytes: bytes, top_k: int = 3) -> dict:
         """

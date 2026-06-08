@@ -1,7 +1,7 @@
 model:
   name: "mobilenet_v2"
   pretrained: true
-  num_classes: 38
+  num_classes: 88
   dropout: 0.3
 
 dataset:

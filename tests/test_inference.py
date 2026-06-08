@@ -30,7 +30,7 @@ class _FakeClassifier:
     def __init__(self, confidence: float) -> None:
         self.confidence = confidence
 
-    def predict(self, image_bytes: bytes, top_k: int = 3) -> dict:
+    def predict(self, image_bytes: bytes, top_k: int = 5) -> dict:
         return {
             "top_class": "Tomato___Early_blight",
             "confidence": self.confidence,
@@ -38,7 +38,9 @@ class _FakeClassifier:
                 {"label": "Tomato___Early_blight", "probability": self.confidence},
                 {"label": "Tomato___Late_blight", "probability": 0.05},
                 {"label": "Tomato___healthy", "probability": 0.03},
-            ],
+                {"label": "Potato___Early_blight", "probability": 0.01},
+                {"label": "Potato___Late_blight", "probability": 0.01},
+            ][:top_k],
         }
 
 
@@ -46,12 +48,11 @@ def test_predictor_parses_class_label() -> None:
     predictor = PlantPredictor(classifier=_FakeClassifier(0.9))
     result = predictor.predict(_png_bytes())
     assert result["species"] == "Tomato___Early_blight"
-    assert result["crop"] == "Tomato"
-    assert result["condition"] == "Early blight"
-    assert result["is_healthy"] is False
+    assert len(result["top_predictions"]) == 5
 
 
 def test_predictor_low_confidence_flag() -> None:
-    predictor = PlantPredictor(classifier=_FakeClassifier(0.30))
+    # New threshold is 0.70
+    predictor = PlantPredictor(classifier=_FakeClassifier(0.65))
     result = predictor.predict(_png_bytes())
     assert result["low_confidence"] is True

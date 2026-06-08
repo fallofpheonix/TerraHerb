@@ -19,6 +19,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
+# Embedded fix for OpenMP issue on macOS
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -75,6 +78,7 @@ def run_epoch(
     device: torch.device,
     optimizer: Optional[optim.Optimizer] = None,
     phase: str = "train",
+    max_batches: Optional[int] = None,
 ) -> dict[str, float]:
     """
     Run a single epoch of training or evaluation.
@@ -82,6 +86,7 @@ def run_epoch(
     Args:
         optimizer: If provided, backprop is performed (training mode).
         phase: 'train' or 'val' — controls model.train() / model.eval().
+        max_batches: Used for --fast-dev-run to limit epoch size.
 
     Returns:
         dict with keys: loss, top1_acc, top5_acc
@@ -96,6 +101,9 @@ def run_epoch(
 
     with torch.set_grad_enabled(is_train):
         for images, labels in loader:
+            if max_batches and n_batches >= max_batches:
+                break
+            
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images)                        # log-softmax
@@ -125,7 +133,7 @@ def run_epoch(
 # Main training function
 # ---------------------------------------------------------------------------
 
-def train(config_path: str = DEFAULT_CONFIG_PATH) -> None:
+def train(config_path: str = DEFAULT_CONFIG_PATH, fast_dev_run: bool = False) -> None:
     """
     Run the full two-phase training pipeline.
 
@@ -134,6 +142,8 @@ def train(config_path: str = DEFAULT_CONFIG_PATH) -> None:
     """
     cfg = load_config(config_path)
     logger.info("Config loaded from '%s'.", config_path)
+    if fast_dev_run:
+        logger.warning("Running in FAST DEV RUN mode (1 epoch, 2 batches).")
 
     device = torch.device(
         "cuda" if (cfg["training"]["device"] == "cuda" and torch.cuda.is_available()) else "cpu"
@@ -197,12 +207,15 @@ def train(config_path: str = DEFAULT_CONFIG_PATH) -> None:
     # Phase 1: Head only
     # ---------------------
     logger.info("=== Phase 1: Head-only training ===")
-    scheduler = CosineAnnealingLR(optimizer, T_max=train_cfg["epochs"])
+    epochs_phase1 = 1 if fast_dev_run else train_cfg["epochs"]
+    max_batches = 2 if fast_dev_run else None
+    
+    scheduler = CosineAnnealingLR(optimizer, T_max=epochs_phase1)
 
-    for epoch in range(1, train_cfg["epochs"] + 1):
+    for epoch in range(1, epochs_phase1 + 1):
         t0 = time.perf_counter()
-        train_metrics = run_epoch(model, train_loader, criterion, device, optimizer, "train")
-        val_metrics = run_epoch(model, val_loader, criterion, device, phase="val")
+        train_metrics = run_epoch(model, train_loader, criterion, device, optimizer, "train", max_batches=max_batches)
+        val_metrics = run_epoch(model, val_loader, criterion, device, phase="val", max_batches=max_batches)
         scheduler.step()
         epoch_time = time.perf_counter() - t0
 
@@ -211,7 +224,7 @@ def train(config_path: str = DEFAULT_CONFIG_PATH) -> None:
             "train loss=%.4f acc=%.3f | "
             "val loss=%.4f acc=%.3f top5=%.3f | "
             "%.1fs",
-            epoch, train_cfg["epochs"],
+            epoch, epochs_phase1,
             train_metrics["loss"], train_metrics["top1_acc"],
             val_metrics["loss"], val_metrics["top1_acc"], val_metrics["top5_acc"],
             epoch_time,
@@ -222,7 +235,7 @@ def train(config_path: str = DEFAULT_CONFIG_PATH) -> None:
         history.append(row)
 
         # Save best model
-        if val_metrics["top1_acc"] > best_val_acc:
+        if val_metrics["top1_acc"] >= best_val_acc:
             best_val_acc = val_metrics["top1_acc"]
             model.save(str(save_dir / "mobilenet_v2_best.pth"))
             logger.info("  ✅ New best val acc: %.4f — checkpoint saved.", best_val_acc)
@@ -236,44 +249,45 @@ def train(config_path: str = DEFAULT_CONFIG_PATH) -> None:
     # ---------------------
     # Phase 2: Fine-tuning
     # ---------------------
-    logger.info("=== Phase 2: Fine-tuning last 5 backbone layers ===")
-    model.unfreeze_top_layers(n_layers=5)
-
-    # Rebuild optimiser to include newly unfrozen params at a lower LR
-    ft_lr = opt_cfg["lr"] / 10
-    optimizer_ft = optim.AdamW(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=ft_lr,
-        weight_decay=opt_cfg["weight_decay"],
-    )
-    scheduler_ft = CosineAnnealingLR(optimizer_ft, T_max=10)
-    epochs_no_improve = 0
-
-    for epoch in range(1, 11):  # 10 fine-tuning epochs
-        t0 = time.perf_counter()
-        train_metrics = run_epoch(model, train_loader, criterion, device, optimizer_ft, "train")
-        val_metrics = run_epoch(model, val_loader, criterion, device, phase="val")
-        scheduler_ft.step()
-
-        logger.info(
-            "FT Epoch %02d/10 | "
-            "train loss=%.4f acc=%.3f | "
-            "val loss=%.4f acc=%.3f top5=%.3f | %.1fs",
-            epoch, train_metrics["loss"], train_metrics["top1_acc"],
-            val_metrics["loss"], val_metrics["top1_acc"], val_metrics["top5_acc"],
-            time.perf_counter() - t0,
+    if not fast_dev_run:
+        logger.info("=== Phase 2: Fine-tuning last 5 backbone layers ===")
+        model.unfreeze_top_layers(n_layers=5)
+    
+        # Rebuild optimiser to include newly unfrozen params at a lower LR
+        ft_lr = opt_cfg["lr"] / 10
+        optimizer_ft = optim.AdamW(
+            filter(lambda p: p.requires_grad, model.parameters()),
+            lr=ft_lr,
+            weight_decay=opt_cfg["weight_decay"],
         )
-
-        if val_metrics["top1_acc"] > best_val_acc:
-            best_val_acc = val_metrics["top1_acc"]
-            model.save(str(save_dir / "mobilenet_v2_best.pth"))
-            logger.info("  ✅ New best (fine-tune) val acc: %.4f", best_val_acc)
-            epochs_no_improve = 0
-        else:
-            epochs_no_improve += 1
-            if epochs_no_improve >= 3:
-                logger.info("Fine-tuning early stop at FT epoch %d.", epoch)
-                break
+        scheduler_ft = CosineAnnealingLR(optimizer_ft, T_max=10)
+        epochs_no_improve = 0
+    
+        for epoch in range(1, 11):  # 10 fine-tuning epochs
+            t0 = time.perf_counter()
+            train_metrics = run_epoch(model, train_loader, criterion, device, optimizer_ft, "train")
+            val_metrics = run_epoch(model, val_loader, criterion, device, phase="val")
+            scheduler_ft.step()
+    
+            logger.info(
+                "FT Epoch %02d/10 | "
+                "train loss=%.4f acc=%.3f | "
+                "val loss=%.4f acc=%.3f top5=%.3f | %.1fs",
+                epoch, train_metrics["loss"], train_metrics["top1_acc"],
+                val_metrics["loss"], val_metrics["top1_acc"], val_metrics["top5_acc"],
+                time.perf_counter() - t0,
+            )
+    
+            if val_metrics["top1_acc"] >= best_val_acc:
+                best_val_acc = val_metrics["top1_acc"]
+                model.save(str(save_dir / "mobilenet_v2_best.pth"))
+                logger.info("  ✅ New best (fine-tune) val acc: %.4f", best_val_acc)
+                epochs_no_improve = 0
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve >= 3:
+                    logger.info("Fine-tuning early stop at FT epoch %d.", epoch)
+                    break
 
     # Save final weights
     model.save(str(save_dir / "mobilenet_v2.pth"))
@@ -294,5 +308,10 @@ if __name__ == "__main__":
         default=DEFAULT_CONFIG_PATH,
         help="Path to YAML training config (default: configs/default_training.yaml)",
     )
+    parser.add_argument(
+        "--fast-dev-run",
+        action="store_true",
+        help="Run 1 epoch with 2 batches to test the pipeline",
+    )
     args = parser.parse_args()
-    train(config_path=args.config)
+    train(config_path=args.config, fast_dev_run=args.fast_dev_run)

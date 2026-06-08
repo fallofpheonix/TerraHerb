@@ -75,9 +75,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # tighten in production
+    allow_origins=["http://localhost:3000"],  # Only allow frontend dev server
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],            # Restrict methods
     allow_headers=["*"],
 )
 
@@ -105,6 +105,7 @@ class IdentifyResponse(BaseModel):
     is_healthy: bool
     confidence: float = Field(..., ge=0.0, le=1.0)
     low_confidence: bool
+    status: str = "success"  # success, uncertain, unsupported
     top_predictions: list[TopPrediction]
     knowledge: dict
     latency_ms: float
@@ -135,6 +136,23 @@ def readiness_check() -> JSONResponse:
             detail="Model not yet loaded.",
         )
     return JSONResponse({"status": "ready", "classes": len(PLANT_CLASSES)})
+
+
+@app.get("/identify/scope", tags=["Metadata"])
+def get_supported_scope() -> JSONResponse:
+    """
+    Return a structured map of supported crops and their diseases.
+    Priority 2: Define Supported Scope.
+    """
+    scope: dict[str, list[str]] = {}
+    for label in PLANT_CLASSES:
+        parts = label.split("___", 1)
+        crop = parts[0].replace("_", " ").strip()
+        disease = parts[1].replace("_", " ").strip() if len(parts) > 1 else "healthy"
+        if crop not in scope:
+            scope[crop] = []
+        scope[crop].append(disease)
+    return JSONResponse({"supported_crops": scope})
 
 
 @app.post(
@@ -184,14 +202,44 @@ async def identify_plant(file: UploadFile = File(...)) -> IdentifyResponse:
         )
 
     # --- Knowledge enrichment ---
-    knowledge = retriever.fetch_plant_data(prediction["species"])
+    # Priority 0 & 1: Handle Low Confidence and OOD Detection
+    if prediction["low_confidence"]:
+        # If the top prediction is extremely low (e.g. < 0.3) it's likely an unsupported crop
+        is_unsupported = prediction["confidence"] < 0.30
+        status_code = "unsupported" if is_unsupported else "uncertain"
+        
+        logger.warning(
+            "Low-confidence prediction (%.2f). Status: %s",
+            prediction["confidence"],
+            status_code,
+        )
+        
+        knowledge = {
+            "status": status_code,
+            "message": (
+                "This crop appears to be outside our trained expertise." 
+                if is_unsupported else 
+                "Confidence too low for reliable botanical lookup."
+            ),
+            "raw_label": prediction["species"],
+            "treatment": {
+                "organic": ["Consult local agricultural extension office for verification"],
+                "chemical": ["Consult a licensed agronomist"],
+                "prevention": ["Ensure image is clear and well-lit; check our supported crops list."],
+            },
+        }
+    else:
+        status_code = "success"
+        knowledge = retriever.fetch_plant_data(prediction["species"])
+
     latency_ms = (time.perf_counter() - t0) * 1000
 
     logger.info(
-        "Identified '%s' (conf=%.2f) in %.1fms",
+        "Identified '%s' (conf=%.2f) in %.1fms. Status: %s",
         prediction["species"],
         prediction["confidence"],
         latency_ms,
+        status_code
     )
 
     return IdentifyResponse(
@@ -201,6 +249,7 @@ async def identify_plant(file: UploadFile = File(...)) -> IdentifyResponse:
         is_healthy=prediction["is_healthy"],
         confidence=prediction["confidence"],
         low_confidence=prediction["low_confidence"],
+        status=status_code,
         top_predictions=[TopPrediction(**p) for p in prediction["top_predictions"]],
         knowledge=knowledge,
         latency_ms=round(latency_ms, 2),

@@ -70,6 +70,26 @@ DISEASE_TREATMENT_MAP: dict[str, dict] = {
         "chemical": ["Captan fungicide"],
         "prevention": ["Ensure adequate soil moisture", "Mulch to retain moisture"],
     },
+    "rust": {
+        "organic": ["Remove infected leaves", "Neem oil application", "Sulfur sprays"],
+        "chemical": ["Tebuconazole", "Azoxystrobin", "Propiconazole"],
+        "prevention": ["Plant resistant varieties", "Destroy volunteer crop plants"],
+    },
+    "blast": {
+        "organic": ["Improve soil health with compost", "Avoid excess nitrogen"],
+        "chemical": ["Tricyclazole", "Isoprothiolane", "Carbendazim"],
+        "prevention": ["Plant resistant varieties", "Proper water management"],
+    },
+    "smut": {
+        "organic": ["Hot water seed treatment", "Crop rotation"],
+        "chemical": ["Carboxin", "Vitavax seed treatment"],
+        "prevention": ["Use certified disease-free seeds", "Avoid planting in infected soil"],
+    },
+    "hispa": {
+        "organic": ["Manual removal of beetles", "Introduce predatory wasps"],
+        "chemical": ["Chlorpyrifos", "Quinalphos application"],
+        "prevention": ["Maintain weed-free bunds", "Clip leaf tips before transplanting"],
+    },
     "healthy": {
         "organic": [],
         "chemical": [],
@@ -89,6 +109,43 @@ def _get_treatment(condition: str) -> dict:
         "chemical": ["Consult a licensed agronomist"],
         "prevention": ["Monitor closely; isolate from other plants"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Canonical Mappings (Priority 1: Repair Knowledge Retrieval)
+# ---------------------------------------------------------------------------
+
+CROP_SCIENTIFIC_NAME_MAP = {
+    "apple": "Malus domestica",
+    "blueberry": "Vaccinium corymbosum",
+    "cherry": "Prunus avium",
+    "cherry (including sour)": "Prunus avium",
+    "corn": "Zea mays",
+    "corn (maize)": "Zea mays",
+    "grape": "Vitis vinifera",
+    "orange": "Citrus sinensis",
+    "peach": "Prunus persica",
+    "pepper": "Capsicum annuum",
+    "pepper, bell": "Capsicum annuum",
+    "potato": "Solanum tuberosum",
+    "raspberry": "Rubus idaeus",
+    "soybean": "Glycine max",
+    "squash": "Cucurbita",
+    "strawberry": "Fragaria x ananassa",
+    "tomato": "Solanum lycopersicum",
+    "wheat": "Triticum aestivum",
+    "rice": "Oryza sativa",
+    "sugarcane": "Saccharum officinarum",
+    "cassava": "Manihot esculenta",
+    "tea": "Camellia sinensis",
+    "lemon": "Citrus limon",
+    "mango": "Mangifera indica",
+    "jamun": "Syzygium cumini",
+    "pomegranate": "Punica granatum",
+    "chili": "Capsicum frutescens",
+    "cucumber": "Cucumis sativus",
+    "coffee": "Coffea",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -178,15 +235,14 @@ class GBIFClient:
     def search_species(self, name: str) -> Optional[dict]:
         """
         Search for a species by name and return the best-matching result.
-        Returns the first result dict, or None if nothing was found.
+        Uses strict matching to prevent unrelated species collisions.
         """
-        data = self._get("species/search", {"q": name, "limit": 1, "status": "ACCEPTED"})
+        data = self._get("species/search", {"q": name, "limit": 1, "status": "ACCEPTED", "strict": True})
         if data and data.get("results"):
-            return data["results"][0]
-        # Fall back to fuzzy match
-        data = self._get("species/suggest", {"q": name, "limit": 1})
-        if data and isinstance(data, list) and data:
-            return data[0]
+            # Secondary validation: check if name matches query
+            top_result = data["results"][0]
+            if name.lower() in top_result.get("scientificName", "").lower():
+                return top_result
         return None
 
     def get_occurrence_count(self, taxon_key: int) -> int:
@@ -292,10 +348,14 @@ class KnowledgeRetriever:
 
         # --- Remote enrichment ---
         if self._gbif:
-            gbif_data = self._gbif.search_species(crop)
-            if gbif_data:
+            # Priority 1: Use canonical scientific name if available
+            search_query = CROP_SCIENTIFIC_NAME_MAP.get(crop.lower().split()[0], crop)
+            gbif_data = self._gbif.search_species(search_query)
+
+            # Priority 1: Validate Kingdom (must be Plantae)
+            if gbif_data and gbif_data.get("kingdom") == "Plantae":
                 result["taxonomy"] = {
-                    "kingdom": gbif_data.get("kingdom", "Plantae"),
+                    "kingdom": "Plantae",
                     "phylum": gbif_data.get("phylum"),
                     "class": gbif_data.get("class"),
                     "order": gbif_data.get("order"),
@@ -312,6 +372,12 @@ class KnowledgeRetriever:
                 if gbif_data.get("key"):
                     result["occurrence_count"] = self._gbif.get_occurrence_count(gbif_data["key"])
                 result["sources"].append("GBIF (Global Biodiversity Information Facility)")
+            else:
+                logger.warning(
+                    "GBIF returned non-Plantae or no result for '%s' (Query: '%s'). Rejecting taxonomy.",
+                    crop,
+                    search_query,
+                )
 
         if self._wiki:
             # Try crop name first, then scientific name if available
